@@ -54,6 +54,15 @@ namespace UnitTests
         }
 
         [Test]
+        public void can_cast_to_simple_property()
+        {
+            var target = new TargetSimplistProperty();
+            var proxy = Instance.Cast<ISimplistProperty>(target);
+            proxy.Value = 2;
+            Assert.AreEqual(2, target.Value);
+        }
+
+        [Test]
         public void cannot_cast_if_a_target_method_is_missing()
         {
             var target = new TargetBad();
@@ -65,9 +74,13 @@ namespace UnitTests
         }
 
         public interface ISimplist
-
         {
             void Execute();
+        }
+
+        public interface ISimplistProperty
+        {
+            int Value { get; set; }
         }
 
         public interface IWithNumber
@@ -86,6 +99,11 @@ namespace UnitTests
             {
                 return new Adder();
             }
+        }
+
+        public class TargetSimplistProperty
+        {
+            public int Value { get; set; }
         }
 
         public class TargetSimplist

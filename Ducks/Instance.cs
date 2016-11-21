@@ -5,6 +5,7 @@ using System.Reflection.Emit;
 using System.Threading;
 using static System.Reflection.MethodAttributes;
 using static System.Reflection.CallingConventions;
+using System.Linq;
 
 namespace Ducks
 {
@@ -59,10 +60,11 @@ namespace Ducks
 
             var ctor = DefineConstructor(typeBuilder, duck, duckField);
 
-            DefineMethods(duck, @interface, typeBuilder, duckField);
+            DefineMembers(duck, @interface, typeBuilder, duckField);
 
             foreach (var parent in @interface.GetInterfaces())
-                DefineMethods(duck, parent, typeBuilder, duckField);
+                DefineMembers(duck, parent, typeBuilder, duckField);
+
 
             var create = DefineStaticCreateMethod(duck, typeBuilder, ctor);
             DefineUnwrapMethod(typeBuilder, duckField);
@@ -71,24 +73,53 @@ namespace Ducks
             return (Func<object, object>)Delegate.CreateDelegate(typeof(Func<object, object>), t.GetMethod("Create", BindingFlags.Static | BindingFlags.Public));
         }
 
-        private static void DefineMethods(Type duck, Type @interface, TypeBuilder typeBuilder, FieldBuilder duckField)
+        static void DefineMembers(Type duck, Type @interface, TypeBuilder typeBuilder, FieldBuilder duckField)
         {
-            foreach (var method in @interface.GetMethods())
+            foreach (var method in @interface.GetMethods().Where(mi => !mi.IsSpecialName)) // ignore get and set property methods
             {
-                MethodInfo duckMethod = FindDuckMethod(duck, method);
+                var duckMethod = FindDuckMethod(duck, method);
                 AddMethod(typeBuilder, duckMethod, method, duckField);
+            }
+
+            foreach (var prop in @interface.GetProperties())
+            {
+                var duckProp = FindDuckProperty(duck, prop);
+                AddProperty(typeBuilder, duckProp, prop, duckField);
             }
         }
 
-        static ConstructorBuilder DefineConstructor(TypeBuilder typeBuilder, Type duck, FieldBuilder duckField)
+        static PropertyInfo FindDuckProperty(Type duck, PropertyInfo prop)
         {
-            var ctor = typeBuilder.DefineConstructor(Public, HasThis, new[] { duck });
-            var il = ctor.GetILGenerator();
-            il.Emit(OpCodes.Ldarg_0); // push this
-            il.Emit(OpCodes.Ldarg_1); // push duck
-            il.Emit(OpCodes.Stfld, duckField); // store the parameter in the duck field
-            il.Emit(OpCodes.Ret);   // end of ctor
-            return ctor;
+            try
+            {
+                var found = duck.GetProperty(prop.Name, prop.PropertyType);
+                if (found == null)
+                    throw new InvalidCastException($"Type {duck.Name} does not have a method {prop.Name}");
+                if (prop.CanRead && !found.CanRead)
+                    throw new InvalidCastException($"Type {duck.Name} does not have a get property {prop.Name}");
+                if (prop.CanWrite && !found.CanWrite)
+                    throw new InvalidCastException($"Type {duck.Name} does not have a set property {prop.Name}");
+                return found;
+            }
+            catch (AmbiguousMatchException)
+            {
+                throw new InvalidCastException($"Type {duck.Name} has an ambiguous match for method {prop.Name}"); //TODO: parameter list
+            }
+        }
+
+        static void AddProperty(TypeBuilder typeBuilder, PropertyInfo duckProp, PropertyInfo prop, FieldBuilder duckField)
+        {
+            PropertyBuilder propBuilder = typeBuilder.DefineProperty(prop.Name, PropertyAttributes.None, prop.PropertyType, prop.ParameterTypes());
+            if (prop.CanRead)
+            {
+                var getMethod = AddMethod(typeBuilder, duckProp.GetGetMethod(), prop.GetGetMethod(), duckField);
+                propBuilder.SetGetMethod(getMethod);
+            }
+            if (prop.CanWrite)
+            {
+                var setMethod = AddMethod(typeBuilder, duckProp.GetSetMethod(), prop.GetSetMethod(), duckField);
+                propBuilder.SetSetMethod(setMethod);
+            }
         }
 
         static MethodInfo FindDuckMethod(Type duck, MethodInfo method)
@@ -106,7 +137,18 @@ namespace Ducks
             }
         }
 
-        static void AddMethod(TypeBuilder typeBuilder, MethodInfo duckMethod, MethodInfo interfaceMethod, FieldBuilder duckField)
+        static ConstructorBuilder DefineConstructor(TypeBuilder typeBuilder, Type duck, FieldBuilder duckField)
+        {
+            var ctor = typeBuilder.DefineConstructor(Public, HasThis, new[] { duck });
+            var il = ctor.GetILGenerator();
+            il.Emit(OpCodes.Ldarg_0); // push this
+            il.Emit(OpCodes.Ldarg_1); // push duck
+            il.Emit(OpCodes.Stfld, duckField); // store the parameter in the duck field
+            il.Emit(OpCodes.Ret);   // end of ctor
+            return ctor;
+        }
+
+        static MethodBuilder AddMethod(TypeBuilder typeBuilder, MethodInfo duckMethod, MethodInfo interfaceMethod, FieldBuilder duckField)
         {
             var mb = typeBuilder.DefineMethod(interfaceMethod.Name, Public | Virtual | Final, HasThis, interfaceMethod.ReturnType, interfaceMethod.ParameterTypes());
             var il = mb.GetILGenerator();
@@ -124,6 +166,8 @@ namespace Ducks
 
             // return
             il.Emit(OpCodes.Ret);
+
+            return mb;
         }
 
         static MethodBuilder DefineStaticCreateMethod(Type duck, TypeBuilder typeBuilder, ConstructorBuilder ctor)
