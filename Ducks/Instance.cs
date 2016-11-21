@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Threading;
@@ -9,7 +8,7 @@ using static System.Reflection.CallingConventions;
 
 namespace Ducks
 {
-    public static class Duck
+    public static class Instance
     {
         static readonly ConcurrentDictionary<TypePair, Func<object, object>> casts = new ConcurrentDictionary<TypePair, Func<object, object>>();
 
@@ -19,7 +18,7 @@ namespace Ducks
             return t != null ? t : (T)Cast(obj, typeof(T));
         }
 
-        static object Cast(object from, Type to)
+        public static object Cast(object from, Type to)
         {
             if (from == null)
                 throw new ArgumentNullException(nameof(from));
@@ -42,37 +41,39 @@ namespace Ducks
                 throw new ArgumentException($"{@interface} is not an interface");
 
             AppDomain domain = Thread.GetDomain();
-            string assemblyName = "Ducks_Proxy_" + @interface.AsmName() + "_" + duck.AsmName() + ".dll";
+            string assemblyName = "Ducks_Instance_" + @interface.AsmName() + "_" + duck.AsmName() + ".dll";
             var assemblyBuilder = domain.DefineDynamicAssembly(new AssemblyName(assemblyName), AssemblyBuilderAccess.Run);
             var moduleBuilder = assemblyBuilder.DefineDynamicModule(assemblyName);
+
             TypeBuilder typeBuilder = moduleBuilder.DefineType("Proxy");
             typeBuilder.AddInterfaceImplementation(@interface);
-
+            typeBuilder.AddInterfaceImplementation(typeof(IDuck));
+            foreach (var parent in @interface.GetInterfaces())
+                typeBuilder.AddInterfaceImplementation(parent);
+    
             var duckField = typeBuilder.DefineField("duck", duck, FieldAttributes.Private | FieldAttributes.InitOnly);
 
             var ctor = DefineConstructor(typeBuilder, duck, duckField);
 
-            foreach (var method in @interface.GetMethods())
-            {
-                MethodInfo duckMethod = FindDuckMethod(duck, method);
-                AddMethod(typeBuilder, duckMethod, method, duckField);
-            }
+            DefineMethods(duck, @interface, typeBuilder, duckField);
+
+            foreach (var parent in @interface.GetInterfaces())
+                DefineMethods(duck, parent, typeBuilder, duckField);
 
             var create = DefineStaticCreateMethod(duck, typeBuilder, ctor);
+            DefineUnwrapMethod(typeBuilder, duckField);
 
             Type t = typeBuilder.CreateType();
             return (Func<object, object>)Delegate.CreateDelegate(typeof(Func<object, object>), t.GetMethod("Create", BindingFlags.Static | BindingFlags.Public));
         }
 
-        static MethodBuilder DefineStaticCreateMethod(Type duck, TypeBuilder typeBuilder, ConstructorBuilder ctor)
+        private static void DefineMethods(Type duck, Type @interface, TypeBuilder typeBuilder, FieldBuilder duckField)
         {
-            var create = typeBuilder.DefineMethod("Create", Public | Static, Standard, typeof(object), new[] { typeof(object) });
-            var il = create.GetILGenerator();
-            il.Emit(OpCodes.Ldarg_0); // push obj
-            il.Emit(OpCodes.Castclass, duck);   // cast obj to duck
-            il.Emit(OpCodes.Newobj, ctor);  // call ctor(duck)
-            il.Emit(OpCodes.Ret);   // end of create
-            return create;
+            foreach (var method in @interface.GetMethods())
+            {
+                MethodInfo duckMethod = FindDuckMethod(duck, method);
+                AddMethod(typeBuilder, duckMethod, method, duckField);
+            }
         }
 
         static ConstructorBuilder DefineConstructor(TypeBuilder typeBuilder, Type duck, FieldBuilder duckField)
@@ -121,8 +122,27 @@ namespace Ducks
             il.Emit(OpCodes.Ret);
         }
 
-        static Type[] ParameterTypes(this MethodInfo method) => method.GetParameters().Select(p => p.ParameterType).ToArray();
+        static MethodBuilder DefineStaticCreateMethod(Type duck, TypeBuilder typeBuilder, ConstructorBuilder ctor)
+        {
+            var create = typeBuilder.DefineMethod("Create", Public | MethodAttributes.Static, Standard, typeof(object), new[] { typeof(object) });
+            var il = create.GetILGenerator();
+            il.Emit(OpCodes.Ldarg_0); // push obj
+            il.Emit(OpCodes.Castclass, duck);   // cast obj to duck
+            il.Emit(OpCodes.Newobj, ctor);  // call ctor(duck)
+            il.Emit(OpCodes.Ret);   // end of create
+            return create;
+        }
 
-        static string AsmName(this Type type) => type.Name.Replace(".", "_").Replace("+", "-");
+        static MethodBuilder DefineUnwrapMethod(TypeBuilder typeBuilder, FieldBuilder duckField)
+        {
+            var create = typeBuilder.DefineMethod(nameof(IDuck.Unwrap), Public | Virtual | Final, HasThis, typeof(object), new Type[0]);
+            var il = create.GetILGenerator();
+            il.Emit(OpCodes.Ldarg_0); // push this
+            il.Emit(OpCodes.Ldfld, duckField); // push duck field
+            il.Emit(OpCodes.Castclass, typeof(object));   // cast duck to object
+            il.Emit(OpCodes.Ret);   // return the object
+            return create;
+        }
+
     }
 }

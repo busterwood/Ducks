@@ -35,7 +35,10 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Duck.cs" />
+    <Compile Include="Extensions.cs" />
+    <Compile Include="IDuck.cs" />
+    <Compile Include="Static.cs" />
+    <Compile Include="Instance.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TypePair.cs" />
   </ItemGroup>
