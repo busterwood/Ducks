@@ -25,6 +25,10 @@ namespace Ducks
             if (to == null)
                 throw new ArgumentNullException(nameof(to));
 
+            var duck = from as IDuck;
+            if (duck != null)
+                from = duck.Unwrap();
+
             var func = casts.GetOrAdd(new TypePair(from.GetType(), to), pair => CreateProxy(pair.From, pair.To));
             return func(from);
         }

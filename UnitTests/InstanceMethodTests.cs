@@ -46,6 +46,14 @@ namespace UnitTests
         }
 
         [Test]
+        public void can_cast_proxy_to_another_interface_supported_by_wrapped_object()
+        {
+            var target = new Combined();
+            var proxy = Instance.Cast<ISimplist>(target);
+            Instance.Cast<IAdder>(proxy);
+        }
+
+        [Test]
         public void cannot_cast_if_a_target_method_is_missing()
         {
             var target = new TargetBad();
