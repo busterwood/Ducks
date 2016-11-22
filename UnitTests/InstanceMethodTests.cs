@@ -63,6 +63,23 @@ namespace UnitTests
         }
 
         [Test]
+        public void can_cast_to_simple_generic_interface_method()
+        {
+            var target = new Adder();
+            var proxy = Instance.Cast<IAdder<int>>(target);
+            Assert.AreEqual(3, proxy.AddOne(2));
+        }
+
+        [Test]
+        public void can_cast_to_simple_generic_interface_with_property()
+        {
+            var target = new TargetSimplistProperty();
+            var proxy = Instance.Cast<ISimplistProperty<int>>(target);
+            proxy.Value = 2;
+            Assert.AreEqual(2, target.Value);
+        }
+
+        [Test]
         public void cannot_cast_if_a_target_method_is_missing()
         {
             var target = new TargetBad();
@@ -83,6 +100,11 @@ namespace UnitTests
             int Value { get; set; }
         }
 
+        public interface ISimplistProperty<T>
+        {
+            T Value { get; set; }
+        }
+
         public interface IWithNumber
         {
             void Execute(int num);
@@ -91,6 +113,11 @@ namespace UnitTests
         public interface IAdder
         {
             int AddOne(int num);
+        }
+
+        public interface IAdder<T>
+        {
+            T AddOne(T num);
         }
 
         public class AdderStatic
