@@ -44,6 +44,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DelegateTests.cs" />
     <Compile Include="StaticMethodTests.cs" />
     <Compile Include="InstanceMethodTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

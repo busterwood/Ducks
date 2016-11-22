@@ -37,6 +37,7 @@
   <ItemGroup>
     <Compile Include="Extensions.cs" />
     <Compile Include="IDuck.cs" />
+    <Compile Include="Delegate.cs" />
     <Compile Include="Static.cs" />
     <Compile Include="Instance.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -9,17 +9,29 @@ using System.Linq;
 
 namespace Ducks
 {
-    public static class Instance
+    public static class Delegates
     {
-        static readonly ConcurrentDictionary<TypePair, Func<object, object>> casts = new ConcurrentDictionary<TypePair, Func<object, object>>();
+        static readonly ConcurrentDictionary<TypePair, Func<Delegate, object>> casts = new ConcurrentDictionary<TypePair, Func<Delegate, object>>();
 
-        public static T Cast<T>(object obj) where T : class
+        public static T Cast<T>(object from) where T : class
+        {
+            if (from == null)
+                throw new ArgumentNullException(nameof(from));
+            var duck = from as IDuck;
+            if (duck != null && duck.Unwrap() is Delegate)
+                from = duck.Unwrap() as Delegate;
+            if (!(from is Delegate))
+                throw new InvalidCastException($"{from.GetType().Name} is not a Delegate");
+            return (T)Cast((Delegate)from, typeof(T));
+        }
+
+        public static T Cast<T>(Delegate obj) where T : class
         {
             var t = obj as T;
             return t != null ? t : (T)Cast(obj, typeof(T));
         }
 
-        public static object Cast(object from, Type to)
+        public static object Cast(Delegate from, Type to)
         {
             if (from == null)
                 throw new ArgumentNullException(nameof(from));
@@ -27,8 +39,8 @@ namespace Ducks
                 throw new ArgumentNullException(nameof(to));
 
             var duck = from as IDuck;
-            if (duck != null)
-                from = duck.Unwrap();
+            if (duck != null && duck.Unwrap() is Delegate)
+                from = duck.Unwrap() as Delegate;
 
             var func = casts.GetOrAdd(new TypePair(from.GetType(), to), pair => CreateProxy(pair.From, pair.To));
             return func(from);
@@ -36,7 +48,7 @@ namespace Ducks
 
         /// <param name="duck">The duck</param>
         /// <param name="interface">the interface to cast <paramref name="duck"/></param>
-        static Func<object, object> CreateProxy(Type duck, Type @interface)
+        static Func<Delegate, object> CreateProxy(Type duck, Type @interface)
         {
             if (duck == null)
                 throw new ArgumentNullException(nameof(duck));
@@ -51,86 +63,22 @@ namespace Ducks
             var moduleBuilder = assemblyBuilder.DefineDynamicModule(assemblyName);
 
             TypeBuilder typeBuilder = moduleBuilder.DefineType("Proxy");
-
             foreach (var face in @interface.GetInterfaces().Concat(@interface, typeof(IDuck)))
                 typeBuilder.AddInterfaceImplementation(face);
-
+    
             var duckField = typeBuilder.DefineField("duck", duck, FieldAttributes.Private | FieldAttributes.InitOnly);
 
             var ctor = DefineConstructor(typeBuilder, duck, duckField);
 
+            bool defined = false;
             foreach (var face in @interface.GetInterfaces().Concat(@interface))
-                DefineMembers(duck, face, typeBuilder, duckField);
+                DefineMembers(duck, face, typeBuilder, duckField, ref defined);
 
             var create = DefineStaticCreateMethod(duck, typeBuilder, ctor);
             DefineUnwrapMethod(typeBuilder, duckField);
 
             Type t = typeBuilder.CreateType();
-            return (Func<object, object>)Delegate.CreateDelegate(typeof(Func<object, object>), t.GetMethod("Create", BindingFlags.Static | BindingFlags.Public));
-        }
-
-        static void DefineMembers(Type duck, Type @interface, TypeBuilder typeBuilder, FieldBuilder duckField)
-        {
-            foreach (var method in @interface.GetMethods().Where(mi => !mi.IsSpecialName)) // ignore get and set property methods
-            {
-                var duckMethod = FindDuckMethod(duck, method);
-                AddMethod(typeBuilder, duckMethod, method, duckField);
-            }
-
-            foreach (var prop in @interface.GetProperties())
-            {
-                var duckProp = FindDuckProperty(duck, prop);
-                AddProperty(typeBuilder, duckProp, prop, duckField);
-            }
-        }
-
-        static PropertyInfo FindDuckProperty(Type duck, PropertyInfo prop)
-        {
-            try
-            {
-                var found = duck.GetProperty(prop.Name, prop.PropertyType);
-                if (found == null)
-                    throw new InvalidCastException($"Type {duck.Name} does not have a method {prop.Name}");
-                if (prop.CanRead && !found.CanRead)
-                    throw new InvalidCastException($"Type {duck.Name} does not have a get property {prop.Name}");
-                if (prop.CanWrite && !found.CanWrite)
-                    throw new InvalidCastException($"Type {duck.Name} does not have a set property {prop.Name}");
-                return found;
-            }
-            catch (AmbiguousMatchException)
-            {
-                throw new InvalidCastException($"Type {duck.Name} has an ambiguous match for method {prop.Name}"); //TODO: parameter list
-            }
-        }
-
-        static void AddProperty(TypeBuilder typeBuilder, PropertyInfo duckProp, PropertyInfo prop, FieldBuilder duckField)
-        {
-            PropertyBuilder propBuilder = typeBuilder.DefineProperty(prop.Name, PropertyAttributes.None, prop.PropertyType, prop.ParameterTypes());
-            if (prop.CanRead)
-            {
-                var getMethod = AddMethod(typeBuilder, duckProp.GetGetMethod(), prop.GetGetMethod(), duckField);
-                propBuilder.SetGetMethod(getMethod);
-            }
-            if (prop.CanWrite)
-            {
-                var setMethod = AddMethod(typeBuilder, duckProp.GetSetMethod(), prop.GetSetMethod(), duckField);
-                propBuilder.SetSetMethod(setMethod);
-            }
-        }
-
-        static MethodInfo FindDuckMethod(Type duck, MethodInfo method)
-        {
-            try
-            {
-                var found = duck.GetMethod(method.Name, method.ParameterTypes());
-                if (found == null)
-                    throw new InvalidCastException($"Type {duck.Name} does not have a method {method.Name}");
-                return found;
-            }
-            catch (AmbiguousMatchException)
-            {
-                throw new InvalidCastException($"Type {duck.Name} has an ambiguous match for method {method.Name}"); //TODO: parameter list
-            }
+            return (Func<Delegate, object>)Delegate.CreateDelegate(typeof(Func<Delegate, object>), t.GetMethod("Create", BindingFlags.Static | BindingFlags.Public));
         }
 
         static ConstructorBuilder DefineConstructor(TypeBuilder typeBuilder, Type duck, FieldBuilder duckField)
@@ -142,6 +90,37 @@ namespace Ducks
             il.Emit(OpCodes.Stfld, duckField); // store the parameter in the duck field
             il.Emit(OpCodes.Ret);   // end of ctor
             return ctor;
+        }
+
+        static void DefineMembers(Type duck, Type @interface, TypeBuilder typeBuilder, FieldBuilder duckField, ref bool defined)
+        {
+            foreach (var method in @interface.GetMethods().Where(mi => !mi.IsSpecialName)) // ignore get and set property methods
+            {
+                if (defined)
+                    throw new InvalidCastException("More than one method one interface");
+                CheckDelegateMatchesMethod(duck, @interface, method);
+                var duckMethod = duck.GetMethod("Invoke");
+                AddMethod(typeBuilder, duckMethod, method, duckField);
+                defined = true;
+            }
+        }
+
+        static void CheckDelegateMatchesMethod(Type duck, Type @interface, MethodInfo method)
+        {
+            var duckMethod = duck.GetMethod("Invoke");
+            if (method.GetParameters().Length != duckMethod.GetParameters().Length)
+                throw new InvalidCastException($"Delegate has a different number of parameters to {@interface.Name}.{method.Name}");
+
+            int i = 0;
+            var dps = duckMethod.GetParameters();
+            foreach (var mp in method.GetParameters())
+            {
+                if (mp.ParameterType != dps[i].ParameterType)
+                    throw new InvalidCastException($"Parameters types differs at index {i}, delegate parameter type {dps[i].ParameterType.Name} does not match {@interface.Name}.{method.Name} parameter type {mp.ParameterType.Name}");
+                i++;
+            }
+            if (method.ReturnType != duckMethod.ReturnType)
+                throw new InvalidCastException($"Return type differs, delegate returns {dps[i].ParameterType.Name} but method {@interface.Name}.{method.Name} returns {method.Name}");
         }
 
         static MethodBuilder AddMethod(TypeBuilder typeBuilder, MethodInfo duckMethod, MethodInfo interfaceMethod, FieldBuilder duckField)
@@ -168,7 +147,7 @@ namespace Ducks
 
         static MethodBuilder DefineStaticCreateMethod(Type duck, TypeBuilder typeBuilder, ConstructorBuilder ctor)
         {
-            var create = typeBuilder.DefineMethod("Create", Public | MethodAttributes.Static, Standard, typeof(object), new[] { typeof(object) });
+            var create = typeBuilder.DefineMethod("Create", Public | MethodAttributes.Static, Standard, typeof(object), new[] { typeof(Delegate) });
             var il = create.GetILGenerator();
             il.Emit(OpCodes.Ldarg_0); // push obj
             il.Emit(OpCodes.Castclass, duck);   // cast obj to duck
@@ -187,6 +166,15 @@ namespace Ducks
             il.Emit(OpCodes.Ret);   // return the object
             return create;
         }
-
+        
     }
+    //public class Sample
+    //{
+    //    Func<int> duckD;
+
+    //    public int Execute()
+    //    {
+    //        return duckD();
+    //    }
+    //}
 }
