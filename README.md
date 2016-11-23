@@ -49,8 +49,8 @@ namespace MyStuff {
 namespace MyStuff {
 	
 	public interface IExistDeleter {
-		bool Exists();
-		bool Delete();
+		bool Exists(string path);
+		void Delete(string path);
 	}
 
 	public class MyThing {
@@ -85,7 +85,7 @@ It is easy to get a delegate for a single method interface, but not the other wa
 namespace MyStuff {
 	
 	public interface IExister {
-		bool Exists();
+		bool Exists(string path);
 	}
 
 	public class MyThing {
@@ -93,7 +93,7 @@ namespace MyStuff {
 		readonly IExister filesystem;
 
 		// convert the delegate to an instance of the interface
-		public MyThing(Func<boo> exists) {
+		public MyThing(Func<string, bool> exists) {
 			filesystem = Delegates.Cast<IExister>(exists);
 		}
 
