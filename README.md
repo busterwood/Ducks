@@ -26,13 +26,13 @@ namespace MyStuff {
 	public class MyThing {
 
 		// accept any object that implicitly implements the interface
-		public void TheThingIAmWriting(object obj) {
-			var requires = Instance.Cast<IWant>(obj);	// will throw an InvalidCastExcetpion if obj does not have a 'void DoStuff()'' method
-			requires.DoStuff();
+		public void MyMethod(object obj) {
+			IWant requires = Instance.Cast<IWant>(obj);	// will throw an InvalidCastExcetpion if obj does not have a 'void DoStuff()'' method
+			MyMethod(requires); // call the real method
 		}
 
 		// accept any object that explicity implements the interface 
-		public void TheThingIAmWriting(IWant requires) {
+		public void MyMethod(IWant requires) {
 			...
 			requires.DoStuff();
 			...
