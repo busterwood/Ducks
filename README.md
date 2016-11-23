@@ -4,7 +4,7 @@
 
 Duck typing of interfaces at runtime for .NET.
 
-| if it walks like a duck, and talks like a duck, then its a duck.
+> if it walks like a duck, and talks like a duck, then its a duck.
 
 `Ducks` allows you dynamically cast an object to an interface, as long as the object has methods/properties that match the interface.
 `Ducks` has methods to *duck type* to an interface:
@@ -12,11 +12,11 @@ Duck typing of interfaces at runtime for .NET.
 * a class's static methods
 * a delegate to a single method interface
 
-## Why?
+## Why duck type an instance?
 
 Duck typing allows modules to be loosely coupled, for example `Ducks` allows you to write code that defines the interface *it wants to consume*, for example:
 
-```
+```csharp
 namespace MyStuff {
 	
 	public interface IWant {
@@ -45,7 +45,7 @@ namespace MyStuff {
 
 `Ducks` also allows you to use interfaces that are fulfilled by static types, for example you can use this for IO:
 
-```
+```csharp
 namespace MyStuff {
 	
 	public interface IExistDeleter {
@@ -81,7 +81,7 @@ namespace MyStuff {
 
 It is easy to get a delegate for a single method interface, but not the other way around, `Ducks` makes this easy, for example:
 
-```
+```csharp
 namespace MyStuff {
 	
 	public interface IExister {
