@@ -80,6 +80,26 @@ namespace UnitTests
         }
 
         [Test]
+        public void can_cast_to_method_with_out_parameter()
+        {
+            var target = new TargetWithOutMethod();
+            var proxy = Instance.Cast<IMethodWithOut>(target);
+            int val;
+            proxy.Execute(out val);
+            Assert.AreEqual(1, val);
+        }
+
+        [Test]
+        public void can_cast_to_method_with_ref_parameter()
+        {
+            var target = new TargetWithOutMethod();
+            var proxy = Instance.Cast<IMethodWithRef>(target);
+            int val = 1;
+            proxy.AddOne(ref val);
+            Assert.AreEqual(2, val);
+        }
+
+        [Test]
         public void cannot_cast_if_a_target_method_is_missing()
         {
             var target = new TargetBad();
@@ -93,6 +113,30 @@ namespace UnitTests
         public interface ISimplist
         {
             void Execute();
+        }
+
+
+        public interface IMethodWithOut
+        {
+            void Execute(out int val);
+        }
+
+        public interface IMethodWithRef
+        {
+            void AddOne(ref int val);
+        }
+
+        public class TargetWithOutMethod
+        {
+            public void Execute(out int val)
+            {
+                val = 1;
+            }
+
+            public void AddOne(ref int val)
+            {
+                val += 1;
+            }
         }
 
         public interface ISimplistProperty
