@@ -2,7 +2,7 @@
 
 [![Build status](https://ci.appveyor.com/api/projects/status/jeujj9n91gr9t6y7/branch/master?svg=true)](https://ci.appveyor.com/project/busterwood/ducks/branch/master)
 
-[Duck typing](https://en.wikipedia.org/wiki/Duck_typing) of interfaces at runtime for .NET.
+[Duck typing](https://en.wikipedia.org/wiki/Duck_typing) of *interfaces* at runtime for .NET.
 
 > if it walks like a duck, and talks like a duck, then its a duck.
 
