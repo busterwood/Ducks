@@ -1,10 +1,6 @@
-﻿using Ducks;
+﻿using BusterWood.Ducks;
 using NUnit.Framework;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace UnitTests
 {
@@ -14,7 +10,7 @@ namespace UnitTests
         [Test]
         public void can_call_a_void_method_via_proxy()
         {
-            ISimplist proxy = Static.Cast<ISimplist>(typeof(TargetSimplist));
+            ISimplist proxy = Duck.Cast<ISimplist>(typeof(TargetSimplist));
             proxy.Execute();
             Assert.AreEqual(1, TargetSimplist.calls);
         }
@@ -22,7 +18,7 @@ namespace UnitTests
         [Test]
         public void can_call_a_void_method_with_parameter_via_proxy()
         {
-            IWithNumber proxy = Static.Cast<IWithNumber>(typeof(TargetWithParameter));
+            IWithNumber proxy = Duck.Cast<IWithNumber>(typeof(TargetWithParameter));
             proxy.Execute(2);
             Assert.AreEqual(2, TargetWithParameter.Number);
         }
@@ -30,28 +26,28 @@ namespace UnitTests
         [Test]
         public void can_call_a_void_method_with_parameter_that_returns_something()
         {
-            var proxy = Static.Cast<IAdder>(typeof(Adder));
+            var proxy = Duck.Cast<IAdder>(typeof(Adder));
             Assert.AreEqual(3, proxy.AddOne(2));
         }
 
         [Test]
         public void can_proxy_system_io_file()
         {
-            var proxy = Static.Cast<IExister>(typeof(System.IO.File));
+            var proxy = Duck.Cast<IExister>(typeof(System.IO.File));
             Assert.AreEqual(true, proxy.Exists(@"c:\Windows\notepad.exe"));
         }
 
         [Test]
         public void proxy_inherited_interface_types()
         {
-            var proxy = Static.Cast<IExistDeleter>(typeof(System.IO.File));
+            var proxy = Duck.Cast<IExistDeleter>(typeof(System.IO.File));
             Assert.AreEqual(true, proxy.Exists(@"c:\Windows\notepad.exe"));
         }
 
         [Test]
         public void cannot_cast_if_a_target_method_is_missing()
         {
-            Assert.Throws<InvalidCastException>(() => Static.Cast<ISimplist>(typeof(TargetBad)));
+            Assert.Throws<InvalidCastException>(() => Duck.Cast<ISimplist>(typeof(TargetBad)));
         }
 
         public interface IExistDeleter : IExister, IDeleter

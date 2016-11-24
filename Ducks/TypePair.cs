@@ -1,8 +1,7 @@
 ﻿using System;
 
-namespace Ducks
+namespace BusterWood.Ducks
 {
-
     struct TypePair : IEquatable<TypePair>
     {
         public readonly Type From;

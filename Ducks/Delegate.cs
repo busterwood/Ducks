@@ -1,47 +1,19 @@
 ﻿using System;
-using System.Collections.Concurrent;
+using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Threading;
 using static System.Reflection.MethodAttributes;
 using static System.Reflection.CallingConventions;
-using System.Linq;
 
-namespace Ducks
+namespace BusterWood.Ducks
 {
     public static class Delegates
     {
-        static readonly ConcurrentDictionary<TypePair, Func<Delegate, object>> casts = new ConcurrentDictionary<TypePair, Func<Delegate, object>>();
+        static readonly MostlyReadDictionary<TypePair, Func<Delegate, object>> casts = new MostlyReadDictionary<TypePair, Func<Delegate, object>>();
 
-        public static T Cast<T>(object from) where T : class
+        internal static object Cast(Delegate from, Type to)
         {
-            if (from == null)
-                throw new ArgumentNullException(nameof(from));
-            var duck = from as IDuck;
-            if (duck != null && duck.Unwrap() is Delegate)
-                from = duck.Unwrap() as Delegate;
-            if (!(from is Delegate))
-                throw new InvalidCastException($"{from.GetType().Name} is not a Delegate");
-            return (T)Cast((Delegate)from, typeof(T));
-        }
-
-        public static T Cast<T>(Delegate obj) where T : class
-        {
-            var t = obj as T;
-            return t != null ? t : (T)Cast(obj, typeof(T));
-        }
-
-        public static object Cast(Delegate from, Type to)
-        {
-            if (from == null)
-                throw new ArgumentNullException(nameof(from));
-            if (to == null)
-                throw new ArgumentNullException(nameof(to));
-
-            var duck = from as IDuck;
-            if (duck != null && duck.Unwrap() is Delegate)
-                from = duck.Unwrap() as Delegate;
-
             var func = casts.GetOrAdd(new TypePair(from.GetType(), to), pair => CreateProxy(pair.From, pair.To));
             return func(from);
         }

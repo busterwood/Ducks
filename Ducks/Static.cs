@@ -1,26 +1,18 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Threading;
 using static System.Reflection.MethodAttributes;
 using static System.Reflection.CallingConventions;
 
-namespace Ducks
+namespace BusterWood.Ducks
 {
     public static class Static
     {
-        static readonly ConcurrentDictionary<TypePair, object> proxies = new ConcurrentDictionary<TypePair, object>();
+        static readonly MostlyReadDictionary<TypePair, object> proxies = new MostlyReadDictionary<TypePair, object>();
 
-        public static T Cast<T>(Type from) where T : class => (T)Cast(from, typeof(T));
-
-        public static object Cast(Type from, Type to)
+        internal static object Cast(Type from, Type to)
         {
-            if (from == null)
-                throw new ArgumentNullException(nameof(from));
-            if (to == null)
-                throw new ArgumentNullException(nameof(to));
-
             return proxies.GetOrAdd(new TypePair(from, to), pair => CreateStaticProxy(pair.From, pair.To));
         }
 

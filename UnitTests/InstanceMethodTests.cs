@@ -1,4 +1,4 @@
-﻿using Ducks;
+﻿using BusterWood.Ducks;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
@@ -15,7 +15,7 @@ namespace UnitTests
         public void can_call_a_void_method_via_proxy()
         {
             var target = new TargetSimplist();
-            ISimplist proxy = Instance.Cast<ISimplist>(target);
+            ISimplist proxy = Duck.Cast<ISimplist>(target);
             proxy.Execute();
             Assert.AreEqual(1, target.calls);
         }
@@ -24,7 +24,7 @@ namespace UnitTests
         public void can_call_a_void_method_with_parameter_via_proxy()
         {
             var target = new TargetWithParameter();
-            IWithNumber proxy = Instance.Cast<IWithNumber>(target);
+            IWithNumber proxy = Duck.Cast<IWithNumber>(target);
             proxy.Execute(2);
             Assert.AreEqual(2, target.Number);
         }
@@ -33,7 +33,7 @@ namespace UnitTests
         public void can_call_a_void_method_with_parameter_that_returns_something()
         {
             var target = new Adder();
-            var proxy = Instance.Cast<IAdder>(target);
+            var proxy = Duck.Cast<IAdder>(target);
             Assert.AreEqual(3, proxy.AddOne(2));
         }
 
@@ -41,7 +41,7 @@ namespace UnitTests
         public void can_create_proxy_for_interface_that_inherits_other_interfaces()
         {
             var target = new Combined();
-            var proxy = Instance.Cast<ISimplistWithAdder>(target);
+            var proxy = Duck.Cast<ISimplistWithAdder>(target);
             Assert.AreEqual(3, proxy.AddOne(2));
         }
 
@@ -49,15 +49,15 @@ namespace UnitTests
         public void can_cast_proxy_to_another_interface_supported_by_wrapped_object()
         {
             var target = new Combined();
-            var proxy = Instance.Cast<ISimplist>(target);
-            Instance.Cast<IAdder>(proxy);
+            var proxy = Duck.Cast<ISimplist>(target);
+            Duck.Cast<IAdder>(proxy);
         }
 
         [Test]
         public void can_cast_to_simple_property()
         {
             var target = new TargetSimplistProperty();
-            var proxy = Instance.Cast<ISimplistProperty>(target);
+            var proxy = Duck.Cast<ISimplistProperty>(target);
             proxy.Value = 2;
             Assert.AreEqual(2, target.Value);
         }
@@ -66,7 +66,7 @@ namespace UnitTests
         public void can_cast_to_simple_generic_interface_method()
         {
             var target = new Adder();
-            var proxy = Instance.Cast<IAdder<int>>(target);
+            var proxy = Duck.Cast<IAdder<int>>(target);
             Assert.AreEqual(3, proxy.AddOne(2));
         }
 
@@ -74,7 +74,7 @@ namespace UnitTests
         public void can_cast_to_simple_generic_interface_with_property()
         {
             var target = new TargetSimplistProperty();
-            var proxy = Instance.Cast<ISimplistProperty<int>>(target);
+            var proxy = Duck.Cast<ISimplistProperty<int>>(target);
             proxy.Value = 2;
             Assert.AreEqual(2, target.Value);
         }
@@ -103,7 +103,7 @@ namespace UnitTests
         public void cannot_cast_if_a_target_method_is_missing()
         {
             var target = new TargetBad();
-            Assert.Throws<InvalidCastException>(() => Instance.Cast<ISimplist>(target));
+            Assert.Throws<InvalidCastException>(() => Duck.Cast<ISimplist>(target));
         }
 
         public interface ISimplistWithAdder : ISimplist, IAdder

@@ -1,4 +1,4 @@
-﻿using Ducks;
+﻿using BusterWood.Ducks;
 using NUnit.Framework;
 using System;
 
@@ -12,7 +12,7 @@ namespace UnitTests
         {
             int calls = 0;
             Action target = () => calls++;
-            ISimplist proxy = Delegates.Cast<ISimplist>(target);
+            ISimplist proxy = Duck.Cast<ISimplist>(target);
             proxy.Execute();
             Assert.AreEqual(1, calls);
         }
@@ -22,7 +22,7 @@ namespace UnitTests
         {
             int number = 0;
             Action<int> target = n => number = n;
-            IWithNumber proxy = Delegates.Cast<IWithNumber>(target);
+            IWithNumber proxy = Duck.Cast<IWithNumber>(target);
             proxy.Execute(2);
             Assert.AreEqual(2, number);
         }
@@ -31,7 +31,7 @@ namespace UnitTests
         public void can_call_a_void_method_with_parameter_that_returns_something()
         {
             Func<int, int> target = n => n + 1;
-            var proxy = Delegates.Cast<IAdder>(target);
+            var proxy = Duck.Cast<IAdder>(target);
             Assert.AreEqual(3, proxy.AddOne(2));
         }
 
@@ -39,7 +39,7 @@ namespace UnitTests
         public void can_cast_to_simple_generic_interface_method()
         {
             Func<int, int> target = n => n + 1;
-            var proxy = Delegates.Cast<IAdder<int>>(target);
+            var proxy = Duck.Cast<IAdder<int>>(target);
             Assert.AreEqual(3, proxy.AddOne(2));
         }
 
@@ -47,8 +47,8 @@ namespace UnitTests
         public void can_cast_proxy_to_another_interface_supported_by_wrapped_object()
         {
             Func<int, int> target = n => n + 1;
-            var proxy = Delegates.Cast<IAdder>(target);
-            var proxy2 = Delegates.Cast<IAdder<int>>(proxy); // note: cast the proxy
+            var proxy = Duck.Cast<IAdder>(target);
+            var proxy2 = Duck.Cast<IAdder<int>>(proxy); // note: cast the proxy
             Assert.AreEqual(3, proxy2.AddOne(2));
         }
 

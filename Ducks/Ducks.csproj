@@ -7,8 +7,8 @@
     <ProjectGuid>{8A92B006-BA59-4AD4-8B72-BC1AB54AE8E4}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Ducks</RootNamespace>
-    <AssemblyName>Ducks</AssemblyName>
+    <RootNamespace>BusterWood.Ducks</RootNamespace>
+    <AssemblyName>BusterWood.Ducks</AssemblyName>
     <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -35,9 +35,11 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Duck.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="IDuck.cs" />
     <Compile Include="Delegate.cs" />
+    <Compile Include="MostlyReadDictionary.cs" />
     <Compile Include="Static.cs" />
     <Compile Include="Instance.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

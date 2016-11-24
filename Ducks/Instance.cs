@@ -1,42 +1,26 @@
 ﻿using System;
-using System.Collections.Concurrent;
+using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Threading;
 using static System.Reflection.MethodAttributes;
 using static System.Reflection.CallingConventions;
-using System.Linq;
 
-namespace Ducks
+namespace BusterWood.Ducks
 {
     public static class Instance
     {
-        static readonly ConcurrentDictionary<TypePair, Func<object, object>> casts = new ConcurrentDictionary<TypePair, Func<object, object>>();
+        static readonly MostlyReadDictionary<TypePair, Func<object, object>> casts = new MostlyReadDictionary<TypePair, Func<object, object>>();
 
-        public static T Cast<T>(object obj) where T : class
+        internal static object Cast(object from, Type to)
         {
-            var t = obj as T;
-            return t != null ? t : (T)Cast(obj, typeof(T));
-        }
-
-        public static object Cast(object from, Type to)
-        {
-            if (from == null)
-                throw new ArgumentNullException(nameof(from));
-            if (to == null)
-                throw new ArgumentNullException(nameof(to));
-
-            var duck = from as IDuck;
-            if (duck != null)
-                from = duck.Unwrap();
-
             var func = casts.GetOrAdd(new TypePair(from.GetType(), to), pair => CreateProxy(pair.From, pair.To));
             return func(from);
         }
 
         /// <param name="duck">The duck</param>
         /// <param name="interface">the interface to cast <paramref name="duck"/></param>
-        static Func<object, object> CreateProxy(Type duck, Type @interface)
+        internal static Func<object, object> CreateProxy(Type duck, Type @interface)
         {
             if (duck == null)
                 throw new ArgumentNullException(nameof(duck));
