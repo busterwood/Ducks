@@ -27,7 +27,7 @@ namespace MyStuff {
 
 		// accept any object that implicitly implements the interface
 		public void MyMethod(object obj) {
-			IWant requires = Instance.Cast<IWant>(obj);	// will throw an InvalidCastExcetpion if obj does not have a 'void DoStuff()'' method
+			IWant requires = Duck.Cast<IWant>(obj);	// will throw an InvalidCastExcetpion if obj does not have a 'void DoStuff()'' method
 			MyMethod(requires); // call the real method
 		}
 
@@ -59,7 +59,7 @@ namespace MyStuff {
 
 		// System.IO.File implicitly implements the interface
 		public MyThing() {
-			filesystem = Static.Cast<IExistDeleter>(typeof(System.IO.File));
+			filesystem = Duck.Cast<IExistDeleter>(typeof(System.IO.File));
 		}
 
 		// accept any object that explicity implements the interface 
@@ -94,7 +94,7 @@ namespace MyStuff {
 
 		// convert the delegate to an instance of the interface
 		public MyThing(Func<string, bool> exists) {
-			filesystem = Delegates.Cast<IExister>(exists);
+			filesystem = Duck.Cast<IExister>(exists);
 		}
 
 		// accept any object that explicity implements the interface 
