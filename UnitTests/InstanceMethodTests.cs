@@ -83,7 +83,7 @@ namespace UnitTests
         public void can_cast_to_method_with_out_parameter()
         {
             var target = new TargetWithOutMethod();
-            var proxy = Instance.Cast<IMethodWithOut>(target);
+            var proxy = Duck.Cast<IMethodWithOut>(target);
             int val;
             proxy.Execute(out val);
             Assert.AreEqual(1, val);
@@ -93,7 +93,7 @@ namespace UnitTests
         public void can_cast_to_method_with_ref_parameter()
         {
             var target = new TargetWithOutMethod();
-            var proxy = Instance.Cast<IMethodWithRef>(target);
+            var proxy = Duck.Cast<IMethodWithRef>(target);
             int val = 1;
             proxy.AddOne(ref val);
             Assert.AreEqual(2, val);
