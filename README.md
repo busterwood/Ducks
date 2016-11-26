@@ -12,9 +12,15 @@
 * a class's static methods
 * a delegate to a single method interface
 
+## Why duck typing?
+
+* loose coupling
+* composition at *at run-time* not complie-time
+* easier testing by duck-typing static methods (see below)
+
 ## Why duck type an instance?
 
-Duck typing allows modules to be loosely coupled, for example `Ducks` allows you to write code that defines the interface *it wants to consume*, for example:
+Using "Duck typing" allows assemblies to be loosely coupled, allowing you change compile-time compile-time dependencies to be run-time dependencies.  For example `Ducks` allows you to write code that defines the interface *it wants to consume* but does not require users of your code to directly implement your interface:
 
 ```csharp
 namespace MyStuff {
@@ -39,11 +45,13 @@ namespace MyStuff {
 		}
 	}
 }
-````
+```
+
+Style note: you may wish to define methods that do duck typing as an extension method, e.g. the first method above could be defined as as an extension method.
 
 ## Why static duck typing?
 
-`Ducks` also allows you to use interfaces that are fulfilled by static types, for example you can use this for IO:
+`Ducks` also allows you to use interfaces that are fulfilled by static types, allowing you code to be loosely coupled rather than directly calling static methods.  For example, you no longer need to directly call static methods on the `System.IO.File` class (or `System.IO.File`), you can define an interface for the methods you need:
 
 ```csharp
 namespace MyStuff {
@@ -111,3 +119,28 @@ namespace MyStuff {
 	}
 }
 ```
+
+## How do I get my original object back?
+
+When you call `Duck.Cast<>()` you get an instance of a run-time generated type that fulfills all the interfaces of you original object.  To get you original object back, call `Duck.Cast<>()` again with your original object type, for example:
+
+```csharp
+public class MyThing {
+  void DoStuff();
+}
+
+public interface IStuffDoer {
+  void DoStuff();
+}
+
+
+...
+  var original = new MyThing();
+  var duck = Duck.Cast<ISuffDoer>(original); // duck is a run-time generated proxy
+  var backAgain = Duck.Cast<MyThing>(duck); // orignal and backAgain now contain a reference to the same object
+...
+```
+
+### Inspiration
+
+I was inspired by the [interface mechanism of Go](https://golang.org/).
