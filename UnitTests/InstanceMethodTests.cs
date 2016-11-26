@@ -106,6 +106,34 @@ namespace UnitTests
             Assert.Throws<InvalidCastException>(() => Duck.Cast<ISimplist>(target));
         }
 
+        [Test]
+        public void can_duck_type_an_event()
+        {
+            var target = new TargetEvent();
+            var proxy = Duck.Cast<IEventer>(target);
+            EventHandler hander = (sender, args) => { };
+            proxy.SimpleEvent += hander;
+            Assert.AreEqual(1, target.count);
+            proxy.SimpleEvent -= hander;
+            Assert.AreEqual(0, target.count);
+        }
+
+        public class TargetEvent
+        {
+            public int count;
+
+            public event EventHandler SimpleEvent
+            {
+                add { count++; }
+                remove { count--; }
+            }
+        }
+
+        public interface IEventer
+        {
+            event EventHandler SimpleEvent;
+        }
+
         public interface ISimplistWithAdder : ISimplist, IAdder
         {
         }

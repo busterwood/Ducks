@@ -10,6 +10,7 @@ namespace UnitTests
         [Test]
         public void can_call_a_void_method_via_proxy()
         {
+            TargetSimplist.calls = 0;
             ISimplist proxy = Duck.Cast<ISimplist>(typeof(TargetSimplist));
             proxy.Execute();
             Assert.AreEqual(1, TargetSimplist.calls);
@@ -48,6 +49,34 @@ namespace UnitTests
         public void cannot_cast_if_a_target_method_is_missing()
         {
             Assert.Throws<InvalidCastException>(() => Duck.Cast<ISimplist>(typeof(TargetBad)));
+        }
+
+
+        [Test]
+        public void can_duck_type_an_event()
+        {
+            var proxy = Duck.Cast<IEventer>(typeof(TargetEvent));
+            EventHandler hander = (sender, args) => { };
+            proxy.SimpleEvent += hander;
+            Assert.AreEqual(1, TargetEvent.count);
+            proxy.SimpleEvent -= hander;
+            Assert.AreEqual(0, TargetEvent.count);
+        }
+
+        public static class TargetEvent
+        {
+            public static int count;
+
+            public static event EventHandler SimpleEvent
+            {
+                add { count++; }
+                remove { count--; }
+            }
+        }
+
+        public interface IEventer
+        {
+            event EventHandler SimpleEvent;
         }
 
         public interface IExistDeleter : IExister, IDeleter

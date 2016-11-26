@@ -66,41 +66,14 @@ namespace BusterWood.Ducks
                 var duckProp = FindDuckProperty(duck, prop);
                 AddProperty(typeBuilder, duckProp, prop, duckField);
             }
-        }
 
-        static PropertyInfo FindDuckProperty(Type duck, PropertyInfo prop)
-        {
-            try
+            foreach (var evt in @interface.GetEvents())
             {
-                var found = duck.GetProperty(prop.Name, prop.PropertyType);
-                if (found == null)
-                    throw new InvalidCastException($"Type {duck.Name} does not have a method {prop.Name}");
-                if (prop.CanRead && !found.CanRead)
-                    throw new InvalidCastException($"Type {duck.Name} does not have a get property {prop.Name}");
-                if (prop.CanWrite && !found.CanWrite)
-                    throw new InvalidCastException($"Type {duck.Name} does not have a set property {prop.Name}");
-                return found;
-            }
-            catch (AmbiguousMatchException)
-            {
-                throw new InvalidCastException($"Type {duck.Name} has an ambiguous match for method {prop.Name}"); //TODO: parameter list
+                var duckEvent = FindDuckEvent(duck, evt);
+                AddEvent(typeBuilder, duckEvent, evt, duckField);
             }
         }
 
-        static void AddProperty(TypeBuilder typeBuilder, PropertyInfo duckProp, PropertyInfo prop, FieldBuilder duckField)
-        {
-            PropertyBuilder propBuilder = typeBuilder.DefineProperty(prop.Name, PropertyAttributes.None, prop.PropertyType, prop.ParameterTypes());
-            if (prop.CanRead)
-            {
-                var getMethod = AddMethod(typeBuilder, duckProp.GetGetMethod(), prop.GetGetMethod(), duckField);
-                propBuilder.SetGetMethod(getMethod);
-            }
-            if (prop.CanWrite)
-            {
-                var setMethod = AddMethod(typeBuilder, duckProp.GetSetMethod(), prop.GetSetMethod(), duckField);
-                propBuilder.SetSetMethod(setMethod);
-            }
-        }
 
         static MethodInfo FindDuckMethod(Type duck, MethodInfo method)
         {
@@ -170,6 +143,66 @@ namespace BusterWood.Ducks
             il.Emit(OpCodes.Castclass, typeof(object));   // cast duck to object
             il.Emit(OpCodes.Ret);   // return the object
             return create;
+        }
+
+        static PropertyInfo FindDuckProperty(Type duck, PropertyInfo prop)
+        {
+            try
+            {
+                var found = duck.GetProperty(prop.Name, BindingFlags.Public | BindingFlags.Instance, null, prop.PropertyType, prop.ParameterTypes(), null);
+                if (found == null)
+                    throw new InvalidCastException($"Type {duck.Name} does not have a property {prop.Name} or parameters types do not match");
+                if (prop.CanRead && !found.CanRead)
+                    throw new InvalidCastException($"Type {duck.Name} does not have a get property {prop.Name}");
+                if (prop.CanWrite && !found.CanWrite)
+                    throw new InvalidCastException($"Type {duck.Name} does not have a set property {prop.Name}");
+                return found;
+            }
+            catch (AmbiguousMatchException)
+            {
+                throw new InvalidCastException($"Type {duck.Name} has an ambiguous match for property {prop.Name}"); //TODO: parameter list
+            }
+        }
+
+        static void AddProperty(TypeBuilder typeBuilder, PropertyInfo duckProp, PropertyInfo prop, FieldBuilder duckField)
+        {
+            PropertyBuilder propBuilder = typeBuilder.DefineProperty(prop.Name, PropertyAttributes.None, prop.PropertyType, prop.ParameterTypes());
+            if (prop.CanRead)
+            {
+                var getMethod = AddMethod(typeBuilder, duckProp.GetGetMethod(), prop.GetGetMethod(), duckField);
+                propBuilder.SetGetMethod(getMethod);
+            }
+            if (prop.CanWrite)
+            {
+                var setMethod = AddMethod(typeBuilder, duckProp.GetSetMethod(), prop.GetSetMethod(), duckField);
+                propBuilder.SetSetMethod(setMethod);
+            }
+        }
+
+        private static EventInfo FindDuckEvent(Type duck, EventInfo evt)
+        {
+            try
+            {
+                var found = duck.GetEvent(evt.Name);
+                if (found == null)
+                    throw new InvalidCastException($"Type {duck.Name} does not have an event {evt.Name}");
+                if (evt.EventHandlerType != found.EventHandlerType)
+                    throw new InvalidCastException($"Type {duck.Name} event {evt.Name} has type {found.EventHandlerType.Name} but expected type {evt.EventHandlerType.Name}");
+                return found;
+            }
+            catch (AmbiguousMatchException)
+            {
+                throw new InvalidCastException($"Type {duck.Name} has an ambiguous match for event {evt.Name}");
+            }
+        }
+
+        private static void AddEvent(TypeBuilder typeBuilder, EventInfo duckEvent, EventInfo evt, FieldBuilder duckField)
+        {
+            EventBuilder evtBuilder = typeBuilder.DefineEvent(evt.Name, EventAttributes.None, evt.EventHandlerType);
+            var addMethod = AddMethod(typeBuilder, duckEvent.GetAddMethod(), evt.GetAddMethod(), duckField);
+            evtBuilder.SetAddOnMethod(addMethod);
+            var removeMethod = AddMethod(typeBuilder, duckEvent.GetRemoveMethod(), evt.GetRemoveMethod(), duckField);
+            evtBuilder.SetRemoveOnMethod(removeMethod);
         }
 
     }
