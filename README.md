@@ -12,6 +12,8 @@
 * a class's static methods
 * a delegate to a single method interface
 
+Nuget package is available called [BusterWood.Ducks](https://www.nuget.org/packages/BusterWood.Ducks).
+
 ## Why duck typing?
 
 * loose coupling
