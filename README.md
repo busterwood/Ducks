@@ -19,7 +19,7 @@ Nuget package is available called [BusterWood.Ducks](https://www.nuget.org/packa
 * loose coupling
 * composition at *at run-time* not complie-time
 * easier testing by duck-typing static methods (see below)
-
+\
 ## Why duck type an instance?
 
 Using "Duck typing" allows assemblies to be loosely coupled, allowing you change compile-time compile-time dependencies to be run-time dependencies.  For example `Ducks` allows you to write code that defines the interface *it wants to consume* but does not require users of your code to directly implement your interface:
@@ -142,6 +142,10 @@ public interface IStuffDoer {
   var backAgain = Duck.Cast<MyThing>(duck); // orignal and backAgain now contain a reference to the same object
 ...
 ```
+
+### Mocking support
+
+
 
 ### Inspiration
 

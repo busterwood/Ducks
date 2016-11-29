@@ -103,10 +103,10 @@ namespace UnitTests
         }
 
         [Test]
-        public void can_cast_if_a_target_method_is_missing_but_throwing_not_implemented_exception_is_requrired()
+        public void can_cast_if_a_target_method_is_missing_but_throwing_not_implemented_exception_is_required()
         {
             var target = new TargetBad();
-            var proxy = Duck.Cast<ISimplist>(target, MissingMethods.NotImplemented);
+            var proxy = Mock.Cast<ISimplist>(target);
             Assert.Throws<NotImplementedException>(() => proxy.Execute());
         }
 
