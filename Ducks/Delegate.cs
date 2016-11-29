@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Threading;
 
 namespace BusterWood.Ducks
 {
@@ -27,9 +26,8 @@ namespace BusterWood.Ducks
             if (!@interface.IsInterface)
                 throw new ArgumentException($"{@interface} is not an interface");
 
-            AppDomain domain = Thread.GetDomain();
             string assemblyName = "Ducks_Instance_" + @interface.AsmName() + "_" + duck.AsmName() + ".dll";
-            var assemblyBuilder = domain.DefineDynamicAssembly(new AssemblyName(assemblyName), AssemblyBuilderAccess.Run);
+            var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(assemblyName), AssemblyBuilderAccess.Run);
             var moduleBuilder = assemblyBuilder.DefineDynamicModule(assemblyName);
 
             TypeBuilder typeBuilder = moduleBuilder.DefineType("Proxy");

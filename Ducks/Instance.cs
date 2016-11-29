@@ -2,12 +2,12 @@
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Threading;
 
 namespace BusterWood.Ducks
 {
     public static class Instance
     {
+        const BindingFlags PublicInstance = BindingFlags.Public | BindingFlags.Instance;
         static readonly MostlyReadDictionary<TypePair, Func<object, object>> casts = new MostlyReadDictionary<TypePair, Func<object, object>>();
 
         internal static object Cast(object from, Type to)
@@ -27,9 +27,8 @@ namespace BusterWood.Ducks
             if (!@interface.IsInterface)
                 throw new ArgumentException($"{@interface} is not an interface");
 
-            AppDomain domain = Thread.GetDomain();
             string assemblyName = "Ducks_Instance_" + @interface.AsmName() + "_" + duck.AsmName() + ".dll";
-            var assemblyBuilder = domain.DefineDynamicAssembly(new AssemblyName(assemblyName), AssemblyBuilderAccess.Run);
+            var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(assemblyName), AssemblyBuilderAccess.Run);
             var moduleBuilder = assemblyBuilder.DefineDynamicModule(assemblyName);
 
             TypeBuilder typeBuilder = moduleBuilder.DefineType("Proxy");
@@ -55,54 +54,20 @@ namespace BusterWood.Ducks
         {
             foreach (var method in @interface.GetMethods().Where(mi => !mi.IsSpecialName)) // ignore get and set property methods
             {
-                var duckMethod = FindDuckMethod(duck, method);
+                var duckMethod = duck.FindDuckMethod(method, PublicInstance);
                 typeBuilder.AddMethod(duckMethod, method, duckField);
             }
 
             foreach (var prop in @interface.GetProperties())
             {
-                var duckProp = FindDuckProperty(duck, prop);
+                var duckProp = duck.FindDuckProperty(prop, PublicInstance);
                 AddProperty(typeBuilder, duckProp, prop, duckField);
             }
 
             foreach (var evt in @interface.GetEvents())
             {
-                var duckEvent = FindDuckEvent(duck, evt);
+                var duckEvent = duck.FindDuckEvent(evt, PublicInstance);
                 AddEvent(typeBuilder, duckEvent, evt, duckField);
-            }
-        }
-
-        static MethodInfo FindDuckMethod(Type duck, MethodInfo method)
-        {
-            try
-            {
-                var found = duck.GetMethod(method.Name, method.ParameterTypes());
-                if (found == null)
-                    throw new InvalidCastException($"Type {duck.Name} does not have a method {method.Name}");
-                return found;
-            }
-            catch (AmbiguousMatchException)
-            {
-                throw new InvalidCastException($"Type {duck.Name} has an ambiguous match for method {method.Name}"); //TODO: parameter list
-            }
-        }
-                
-        static PropertyInfo FindDuckProperty(Type duck, PropertyInfo prop)
-        {
-            try
-            {
-                var found = duck.GetProperty(prop.Name, BindingFlags.Public | BindingFlags.Instance, null, prop.PropertyType, prop.ParameterTypes(), null);
-                if (found == null)
-                    throw new InvalidCastException($"Type {duck.Name} does not have a property {prop.Name} or parameters types do not match");
-                if (prop.CanRead && !found.CanRead)
-                    throw new InvalidCastException($"Type {duck.Name} does not have a get property {prop.Name}");
-                if (prop.CanWrite && !found.CanWrite)
-                    throw new InvalidCastException($"Type {duck.Name} does not have a set property {prop.Name}");
-                return found;
-            }
-            catch (AmbiguousMatchException)
-            {
-                throw new InvalidCastException($"Type {duck.Name} has an ambiguous match for property {prop.Name}"); //TODO: parameter list
             }
         }
 
@@ -121,24 +86,7 @@ namespace BusterWood.Ducks
             }
         }
 
-        private static EventInfo FindDuckEvent(Type duck, EventInfo evt)
-        {
-            try
-            {
-                var found = duck.GetEvent(evt.Name);
-                if (found == null)
-                    throw new InvalidCastException($"Type {duck.Name} does not have an event {evt.Name}");
-                if (evt.EventHandlerType != found.EventHandlerType)
-                    throw new InvalidCastException($"Type {duck.Name} event {evt.Name} has type {found.EventHandlerType.Name} but expected type {evt.EventHandlerType.Name}");
-                return found;
-            }
-            catch (AmbiguousMatchException)
-            {
-                throw new InvalidCastException($"Type {duck.Name} has an ambiguous match for event {evt.Name}");
-            }
-        }
-
-        private static void AddEvent(TypeBuilder typeBuilder, EventInfo duckEvent, EventInfo evt, FieldBuilder duckField)
+        static void AddEvent(TypeBuilder typeBuilder, EventInfo duckEvent, EventInfo evt, FieldBuilder duckField)
         {
             EventBuilder evtBuilder = typeBuilder.DefineEvent(evt.Name, EventAttributes.None, evt.EventHandlerType);
             var addMethod = typeBuilder.AddMethod(duckEvent.GetAddMethod(), evt.GetAddMethod(), duckField);

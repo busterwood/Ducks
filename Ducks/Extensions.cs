@@ -18,6 +18,56 @@ namespace BusterWood.Ducks
 
         public static IEnumerable<T> Concat<T>(this IEnumerable<T> source, params T[] items) => Enumerable.Concat(source, items);
 
+        public static MethodInfo FindDuckMethod(this Type duck, MethodInfo method, BindingFlags bindingFlags)
+        {
+            try
+            {
+                var found = duck.GetMethod(method.Name, bindingFlags, null, method.ParameterTypes(), null);
+                if (found == null)
+                    throw new InvalidCastException($"Type {duck.Name} does not have a {bindingFlags} method {method.Name}");
+                return found;
+            }
+            catch (AmbiguousMatchException)
+            {
+                throw new InvalidCastException($"Type {duck.Name} has an ambiguous match for {bindingFlags} method {method.Name}"); //TODO: parameter list
+            }
+        }
+
+        public static PropertyInfo FindDuckProperty(this Type duck, PropertyInfo prop, BindingFlags bindingFlags)
+        {
+            try
+            {
+                var found = duck.GetProperty(prop.Name, bindingFlags, null, prop.PropertyType, prop.ParameterTypes(), null);
+                if (found == null)
+                    throw new InvalidCastException($"Type {duck.Name} does not have a {bindingFlags} property {prop.Name} or parameters types do not match");
+                if (prop.CanRead && !found.CanRead)
+                    throw new InvalidCastException($"Type {duck.Name} does not have a {bindingFlags} get property {prop.Name}");
+                if (prop.CanWrite && !found.CanWrite)
+                    throw new InvalidCastException($"Type {duck.Name} does not have a {bindingFlags} set property {prop.Name}");
+                return found;
+            }
+            catch (AmbiguousMatchException)
+            {
+                throw new InvalidCastException($"Type {duck.Name} has an ambiguous match for property {prop.Name}"); //TODO: parameter list
+            }
+        }
+
+        public static EventInfo FindDuckEvent(this Type duck, EventInfo evt, BindingFlags bindingFlags)
+        {
+            try
+            {
+                var found = duck.GetEvent(evt.Name, bindingFlags);
+                if (found == null)
+                    throw new InvalidCastException($"Type {duck.Name} does not have a {bindingFlags} event {evt.Name}");
+                if (evt.EventHandlerType != found.EventHandlerType)
+                    throw new InvalidCastException($"Type {duck.Name} {bindingFlags} event {evt.Name} has type {found.EventHandlerType.Name} but expected type {evt.EventHandlerType.Name}");
+                return found;
+            }
+            catch (AmbiguousMatchException)
+            {
+                throw new InvalidCastException($"Type {duck.Name} has an ambiguous match for {bindingFlags} event {evt.Name}");
+            }
+        }
 
         public static ConstructorBuilder DefineConstructor(this TypeBuilder typeBuilder, Type duck, FieldBuilder duckField)
         {
