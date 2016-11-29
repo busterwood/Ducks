@@ -51,6 +51,12 @@ namespace UnitTests
             Assert.Throws<InvalidCastException>(() => Duck.Cast<ISimplist>(typeof(TargetBad)));
         }
 
+        [Test]
+        public void can_cast_if_a_target_method_is_missing_but_throwing_not_implemented_is_desired()
+        {
+            var proxy = Duck.Cast<ISimplist>(typeof(TargetBad), MissingMethods.NotImplemented);
+            Assert.Throws<NotImplementedException>(() => proxy.Execute());
+        }
 
         [Test]
         public void can_duck_type_an_event()

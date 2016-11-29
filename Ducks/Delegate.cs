@@ -9,15 +9,15 @@ namespace BusterWood.Ducks
     {
         static readonly MostlyReadDictionary<TypePair, Func<Delegate, object>> casts = new MostlyReadDictionary<TypePair, Func<Delegate, object>>();
 
-        internal static object Cast(Delegate from, Type to)
+        internal static object Cast(Delegate from, Type to, MissingMethods missingMethods)
         {
-            var func = casts.GetOrAdd(new TypePair(from.GetType(), to), pair => CreateProxy(pair.From, pair.To));
+            var func = casts.GetOrAdd(new TypePair(from.GetType(), to, missingMethods), pair => CreateProxy(pair.From, pair.To, pair.MissingMethods));
             return func(from);
         }
 
         /// <param name="duck">The duck</param>
         /// <param name="interface">the interface to cast <paramref name="duck"/></param>
-        static Func<Delegate, object> CreateProxy(Type duck, Type @interface)
+        static Func<Delegate, object> CreateProxy(Type duck, Type @interface, MissingMethods missingMethods)
         {
             if (duck == null)
                 throw new ArgumentNullException(nameof(duck));

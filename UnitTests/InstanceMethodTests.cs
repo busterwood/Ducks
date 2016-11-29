@@ -1,10 +1,6 @@
 ﻿using BusterWood.Ducks;
 using NUnit.Framework;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace UnitTests
 {
@@ -104,6 +100,14 @@ namespace UnitTests
         {
             var target = new TargetBad();
             Assert.Throws<InvalidCastException>(() => Duck.Cast<ISimplist>(target));
+        }
+
+        [Test]
+        public void can_cast_if_a_target_method_is_missing_but_throwing_not_implemented_exception_is_requrired()
+        {
+            var target = new TargetBad();
+            var proxy = Duck.Cast<ISimplist>(target, MissingMethods.NotImplemented);
+            Assert.Throws<NotImplementedException>(() => proxy.Execute());
         }
 
         [Test]

@@ -12,14 +12,14 @@ namespace BusterWood.Ducks
         const BindingFlags PublicStatic = BindingFlags.Public | BindingFlags.Static;
         static readonly MostlyReadDictionary<TypePair, object> proxies = new MostlyReadDictionary<TypePair, object>();
 
-        internal static object Cast(Type from, Type to)
+        internal static object Cast(Type from, Type to, MissingMethods missingMethods)
         {
-            return proxies.GetOrAdd(new TypePair(from, to), pair => CreateStaticProxy(pair.From, pair.To));
+            return proxies.GetOrAdd(new TypePair(from, to, missingMethods), pair => CreateStaticProxy(pair.From, pair.To, pair.MissingMethods));
         }
 
         /// <param name="duck">The duck</param>
         /// <param name="interface">the interface to cast <paramref name="duck"/></param>
-        static object CreateStaticProxy(Type duck, Type @interface)
+        static object CreateStaticProxy(Type duck, Type @interface, MissingMethods missingMethods)
         {
             if (duck == null)
                 throw new ArgumentNullException(nameof(duck));
@@ -34,19 +34,13 @@ namespace BusterWood.Ducks
 
             TypeBuilder typeBuilder = moduleBuilder.DefineType("Proxy");
 
-            typeBuilder.AddInterfaceImplementation(@interface);
-
-            // interfaces that @interface inherits
-            foreach (var parent in @interface.GetInterfaces())
-                typeBuilder.AddInterfaceImplementation(parent);
+            foreach (var face in @interface.GetInterfaces().Concat(@interface))
+                typeBuilder.AddInterfaceImplementation(face);
 
             var ctor = DefineConstructor(typeBuilder);
 
-            DefineMethods(typeBuilder, duck, @interface);
-
-            // add methods for all parent interfaces
-            foreach (var parent in @interface.GetInterfaces())
-                DefineMethods(typeBuilder, duck, parent);
+            foreach (var face in @interface.GetInterfaces().Concat(@interface))
+                DefineMethods(typeBuilder, duck, face, missingMethods);
 
             Type t = typeBuilder.CreateType();
             return Activator.CreateInstance(t);
@@ -60,23 +54,23 @@ namespace BusterWood.Ducks
             return ctor;
         }
 
-        static void DefineMethods(TypeBuilder typeBuilder, Type duck, Type @interface)
+        static void DefineMethods(TypeBuilder typeBuilder, Type duck, Type @interface, MissingMethods missingMethods)
         {
             foreach (var method in @interface.GetMethods().Where(m => !m.IsSpecialName))
             {
-                MethodInfo duckMethod = duck.FindDuckMethod(method, PublicStatic);
+                MethodInfo duckMethod = duck.FindDuckMethod(method, PublicStatic, missingMethods);
                 AddMethod(typeBuilder, duckMethod, method);
             }
 
             foreach (var prop in @interface.GetProperties())
             {
-                var duckProp = duck.FindDuckProperty(prop, PublicStatic);
+                var duckProp = duck.FindDuckProperty(prop, PublicStatic, missingMethods);
                 AddProperty(typeBuilder, duckProp, prop);
             }
 
             foreach (var evt in @interface.GetEvents())
             {
-                var duckEvent = duck.FindDuckEvent(evt, PublicStatic);
+                var duckEvent = duck.FindDuckEvent(evt, PublicStatic, missingMethods);
                 AddEvent(typeBuilder, duckEvent, evt);
             }
         }
@@ -85,6 +79,15 @@ namespace BusterWood.Ducks
         {
             var mb = typeBuilder.DefineMethod(interfaceMethod.Name, Public | Virtual | Final, HasThis, interfaceMethod.ReturnType, interfaceMethod.ParameterTypes());
             var il = mb.GetILGenerator();
+
+            if (duckMethod == null)
+            {
+                // throw a not implemented exception 
+                il.Emit(OpCodes.Newobj, typeof(NotImplementedException).GetConstructor(Type.EmptyTypes));
+                il.Emit(OpCodes.Throw);
+                il.Emit(OpCodes.Ret);
+                return mb;
+            }
 
             // push all the arguments onto the stack
             int i = 1;

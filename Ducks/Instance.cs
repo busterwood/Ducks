@@ -10,15 +10,15 @@ namespace BusterWood.Ducks
         const BindingFlags PublicInstance = BindingFlags.Public | BindingFlags.Instance;
         static readonly MostlyReadDictionary<TypePair, Func<object, object>> casts = new MostlyReadDictionary<TypePair, Func<object, object>>();
 
-        internal static object Cast(object from, Type to)
+        internal static object Cast(object from, Type to, MissingMethods missingMethods)
         {
-            var func = casts.GetOrAdd(new TypePair(from.GetType(), to), pair => CreateProxy(pair.From, pair.To));
+            var func = casts.GetOrAdd(new TypePair(from.GetType(), to, missingMethods), pair => CreateProxy(pair.From, pair.To, pair.MissingMethods));
             return func(from);
         }
 
         /// <param name="duck">The duck</param>
         /// <param name="interface">the interface to cast <paramref name="duck"/></param>
-        internal static Func<object, object> CreateProxy(Type duck, Type @interface)
+        internal static Func<object, object> CreateProxy(Type duck, Type @interface, MissingMethods missingMethods)
         {
             if (duck == null)
                 throw new ArgumentNullException(nameof(duck));
@@ -41,7 +41,7 @@ namespace BusterWood.Ducks
             var ctor = typeBuilder.DefineConstructor(duck, duckField);
 
             foreach (var face in @interface.GetInterfaces().Concat(@interface))
-                DefineMembers(duck, face, typeBuilder, duckField);
+                DefineMembers(duck, face, typeBuilder, duckField, missingMethods);
 
             var create = typeBuilder.DefineStaticCreateMethod(duck, ctor, typeof(object));
             typeBuilder.DefineUnwrapMethod(duckField);
@@ -50,23 +50,23 @@ namespace BusterWood.Ducks
             return (Func<object, object>)Delegate.CreateDelegate(typeof(Func<object, object>), t.GetMethod("Create", BindingFlags.Static | BindingFlags.Public));
         }
 
-        static void DefineMembers(Type duck, Type @interface, TypeBuilder typeBuilder, FieldBuilder duckField)
+        static void DefineMembers(Type duck, Type @interface, TypeBuilder typeBuilder, FieldBuilder duckField, MissingMethods missingMethods)
         {
             foreach (var method in @interface.GetMethods().Where(mi => !mi.IsSpecialName)) // ignore get and set property methods
             {
-                var duckMethod = duck.FindDuckMethod(method, PublicInstance);
+                var duckMethod = duck.FindDuckMethod(method, PublicInstance, missingMethods);
                 typeBuilder.AddMethod(duckMethod, method, duckField);
             }
 
             foreach (var prop in @interface.GetProperties())
             {
-                var duckProp = duck.FindDuckProperty(prop, PublicInstance);
+                var duckProp = duck.FindDuckProperty(prop, PublicInstance, missingMethods);
                 AddProperty(typeBuilder, duckProp, prop, duckField);
             }
 
             foreach (var evt in @interface.GetEvents())
             {
-                var duckEvent = duck.FindDuckEvent(evt, PublicInstance);
+                var duckEvent = duck.FindDuckEvent(evt, PublicInstance, missingMethods);
                 AddEvent(typeBuilder, duckEvent, evt, duckField);
             }
         }

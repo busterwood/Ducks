@@ -18,11 +18,13 @@ namespace BusterWood.Ducks
 
         public static IEnumerable<T> Concat<T>(this IEnumerable<T> source, params T[] items) => Enumerable.Concat(source, items);
 
-        public static MethodInfo FindDuckMethod(this Type duck, MethodInfo method, BindingFlags bindingFlags)
+        public static MethodInfo FindDuckMethod(this Type duck, MethodInfo method, BindingFlags bindingFlags, MissingMethods missingMethods)
         {
             try
             {
                 var found = duck.GetMethod(method.Name, bindingFlags, null, method.ParameterTypes(), null);
+                if (found == null && missingMethods == MissingMethods.NotImplemented)
+                    return null;
                 if (found == null)
                     throw new InvalidCastException($"Type {duck.Name} does not have a {bindingFlags} method {method.Name}");
                 return found;
@@ -33,11 +35,13 @@ namespace BusterWood.Ducks
             }
         }
 
-        public static PropertyInfo FindDuckProperty(this Type duck, PropertyInfo prop, BindingFlags bindingFlags)
+        public static PropertyInfo FindDuckProperty(this Type duck, PropertyInfo prop, BindingFlags bindingFlags, MissingMethods missingMethods)
         {
             try
             {
                 var found = duck.GetProperty(prop.Name, bindingFlags, null, prop.PropertyType, prop.ParameterTypes(), null);
+                if (found == null && missingMethods == MissingMethods.NotImplemented)
+                    return null;
                 if (found == null)
                     throw new InvalidCastException($"Type {duck.Name} does not have a {bindingFlags} property {prop.Name} or parameters types do not match");
                 if (prop.CanRead && !found.CanRead)
@@ -52,11 +56,13 @@ namespace BusterWood.Ducks
             }
         }
 
-        public static EventInfo FindDuckEvent(this Type duck, EventInfo evt, BindingFlags bindingFlags)
+        public static EventInfo FindDuckEvent(this Type duck, EventInfo evt, BindingFlags bindingFlags, MissingMethods missingMethods)
         {
             try
             {
                 var found = duck.GetEvent(evt.Name, bindingFlags);
+                if (found == null && missingMethods == MissingMethods.NotImplemented)
+                    return null;
                 if (found == null)
                     throw new InvalidCastException($"Type {duck.Name} does not have a {bindingFlags} event {evt.Name}");
                 if (evt.EventHandlerType != found.EventHandlerType)
@@ -109,6 +115,15 @@ namespace BusterWood.Ducks
             var mb = typeBuilder.DefineMethod(interfaceMethod.Name, Public | Virtual | Final, HasThis, interfaceMethod.ReturnType, interfaceMethod.ParameterTypes());
             var il = mb.GetILGenerator();
 
+            if (duckMethod == null)
+            {
+                // throw a not implemented exception 
+                il.Emit(OpCodes.Newobj, typeof(NotImplementedException).GetConstructor(Type.EmptyTypes));
+                il.Emit(OpCodes.Throw);
+                il.Emit(OpCodes.Ret);
+                return mb;
+            }
+            
             il.Emit(OpCodes.Ldarg_0); // push this
             il.Emit(OpCodes.Ldfld, duckField); // push duck field
 
