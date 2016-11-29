@@ -152,7 +152,38 @@ public interface IStuffDoer {
 
 ### Mocking support
 
-`Ducks` also supports creation of [mock objects](https://en.wikipedia.org/wiki/Mock_object) via the `Mock.Cast()` methods.  `Mock.Cast()` tries to match the object (or static methods of a type) to the target interface, but if a method cannot be matched then calling the interface methods will throw a `NotImplementedException` and the cast will still succeed.
+`Ducks` also supports creation of [mock objects](https://en.wikipedia.org/wiki/Mock_object) via the `Mock.Cast()` methods.  `Mock.Cast()` tries to match the object (or static methods of a type) to the target interface, but if a method cannot be matched then calling the interface methods will throw a `NotImplementedException`.  For example:
+
+```csharp
+namespace MyStuff {
+	
+	public interface IWant {
+		void DoStuff();
+		void DoMoreStuff();
+	}
+	
+	public class MockThing {
+		public int calls;
+		public void DoStuff() {
+			calls++;
+		}
+		//note: does not implement void DoMoreStuff();
+	}
+
+	[TestFixture]
+	public class MyThingTests {
+
+		[Test]
+		public void MyTest() {
+			var mock = new MockThing();
+			IWant duck = Mock.Cast<IWant>(mock);	// the cast works, even though MockThing does not have a DoMoreStuff method
+			duck.DoStuff(duck);	// works
+			Assert.AreEquals(1, mock.calls);
+			//duck.DoMoreStuff();	//  this would throw a NotImplementedException
+		}
+	}
+}
+```
 
 ### Inspiration
 
