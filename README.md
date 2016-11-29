@@ -176,7 +176,7 @@ namespace MyStuff {
 		[Test]
 		public void MyTest() {
 			var mock = new MockThing();
-			IWant duck = Mock.Cast<IWant>(mock);	// the cast works, even though MockThing does not have a DoMoreStuff method
+			IWant duck = Mock.Cast<IWant>(mock);	// works even though MockThing does not have a DoMoreStuff method
 			duck.DoStuff(duck);	// works
 			Assert.AreEquals(1, mock.calls);
 			//duck.DoMoreStuff();	//  this would throw a NotImplementedException
