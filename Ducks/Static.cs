@@ -1,16 +1,16 @@
 ﻿using System;
+using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Threading;
 using static System.Reflection.MethodAttributes;
 using static System.Reflection.CallingConventions;
-using System.Linq;
 
 namespace BusterWood.Ducks
 {
     public static class Static
     {
-        private const BindingFlags PublicStatic = BindingFlags.Public | BindingFlags.Static;
+        const BindingFlags PublicStatic = BindingFlags.Public | BindingFlags.Static;
         static readonly MostlyReadDictionary<TypePair, object> proxies = new MostlyReadDictionary<TypePair, object>();
 
         internal static object Cast(Type from, Type to)
@@ -150,7 +150,7 @@ namespace BusterWood.Ducks
             }
         }
 
-        private static EventInfo FindDuckEvent(Type duck, EventInfo evt)
+        static EventInfo FindDuckEvent(Type duck, EventInfo evt)
         {
             try
             {
@@ -167,7 +167,7 @@ namespace BusterWood.Ducks
             }
         }
 
-        private static void AddEvent(TypeBuilder typeBuilder, EventInfo duckEvent, EventInfo evt)
+        static void AddEvent(TypeBuilder typeBuilder, EventInfo duckEvent, EventInfo evt)
         {
             EventBuilder evtBuilder = typeBuilder.DefineEvent(evt.Name, EventAttributes.None, evt.EventHandlerType);
             var addMethod = AddMethod(typeBuilder, duckEvent.GetAddMethod(), evt.GetAddMethod());

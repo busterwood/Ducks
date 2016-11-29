@@ -3,8 +3,6 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Threading;
-using static System.Reflection.MethodAttributes;
-using static System.Reflection.CallingConventions;
 
 namespace BusterWood.Ducks
 {
@@ -41,13 +39,13 @@ namespace BusterWood.Ducks
 
             var duckField = typeBuilder.DefineField("duck", duck, FieldAttributes.Private | FieldAttributes.InitOnly);
 
-            var ctor = DefineConstructor(typeBuilder, duck, duckField);
+            var ctor = typeBuilder.DefineConstructor(duck, duckField);
 
             foreach (var face in @interface.GetInterfaces().Concat(@interface))
                 DefineMembers(duck, face, typeBuilder, duckField);
 
-            var create = DefineStaticCreateMethod(duck, typeBuilder, ctor);
-            DefineUnwrapMethod(typeBuilder, duckField);
+            var create = typeBuilder.DefineStaticCreateMethod(duck, ctor, typeof(object));
+            typeBuilder.DefineUnwrapMethod(duckField);
 
             Type t = typeBuilder.CreateType();
             return (Func<object, object>)Delegate.CreateDelegate(typeof(Func<object, object>), t.GetMethod("Create", BindingFlags.Static | BindingFlags.Public));
@@ -58,7 +56,7 @@ namespace BusterWood.Ducks
             foreach (var method in @interface.GetMethods().Where(mi => !mi.IsSpecialName)) // ignore get and set property methods
             {
                 var duckMethod = FindDuckMethod(duck, method);
-                AddMethod(typeBuilder, duckMethod, method, duckField);
+                typeBuilder.AddMethod(duckMethod, method, duckField);
             }
 
             foreach (var prop in @interface.GetProperties())
@@ -74,7 +72,6 @@ namespace BusterWood.Ducks
             }
         }
 
-
         static MethodInfo FindDuckMethod(Type duck, MethodInfo method)
         {
             try
@@ -89,62 +86,7 @@ namespace BusterWood.Ducks
                 throw new InvalidCastException($"Type {duck.Name} has an ambiguous match for method {method.Name}"); //TODO: parameter list
             }
         }
-
-        static ConstructorBuilder DefineConstructor(TypeBuilder typeBuilder, Type duck, FieldBuilder duckField)
-        {
-            var ctor = typeBuilder.DefineConstructor(Public, HasThis, new[] { duck });
-            var il = ctor.GetILGenerator();
-            il.Emit(OpCodes.Ldarg_0); // push this
-            il.Emit(OpCodes.Ldarg_1); // push duck
-            il.Emit(OpCodes.Stfld, duckField); // store the parameter in the duck field
-            il.Emit(OpCodes.Ret);   // end of ctor
-            return ctor;
-        }
-
-        static MethodBuilder AddMethod(TypeBuilder typeBuilder, MethodInfo duckMethod, MethodInfo interfaceMethod, FieldBuilder duckField)
-        {
-            var mb = typeBuilder.DefineMethod(interfaceMethod.Name, Public | Virtual | Final, HasThis, interfaceMethod.ReturnType, interfaceMethod.ParameterTypes());
-            var il = mb.GetILGenerator();
-
-            il.Emit(OpCodes.Ldarg_0); // push this
-            il.Emit(OpCodes.Ldfld, duckField); // push duck field
-
-            // push all the arguments onto the stack
-            int i = 1;
-            foreach (var p in interfaceMethod.GetParameters())
-                il.Emit(OpCodes.Ldarg, i++);
-
-            // call the duck's method
-            il.EmitCall(OpCodes.Callvirt, duckMethod, null);
-
-            // return
-            il.Emit(OpCodes.Ret);
-
-            return mb;
-        }
-
-        static MethodBuilder DefineStaticCreateMethod(Type duck, TypeBuilder typeBuilder, ConstructorBuilder ctor)
-        {
-            var create = typeBuilder.DefineMethod("Create", Public | MethodAttributes.Static, Standard, typeof(object), new[] { typeof(object) });
-            var il = create.GetILGenerator();
-            il.Emit(OpCodes.Ldarg_0); // push obj
-            il.Emit(OpCodes.Castclass, duck);   // cast obj to duck
-            il.Emit(OpCodes.Newobj, ctor);  // call ctor(duck)
-            il.Emit(OpCodes.Ret);   // end of create
-            return create;
-        }
-
-        static MethodBuilder DefineUnwrapMethod(TypeBuilder typeBuilder, FieldBuilder duckField)
-        {
-            var create = typeBuilder.DefineMethod(nameof(IDuck.Unwrap), Public | Virtual | Final, HasThis, typeof(object), new Type[0]);
-            var il = create.GetILGenerator();
-            il.Emit(OpCodes.Ldarg_0); // push this
-            il.Emit(OpCodes.Ldfld, duckField); // push duck field
-            il.Emit(OpCodes.Castclass, typeof(object));   // cast duck to object
-            il.Emit(OpCodes.Ret);   // return the object
-            return create;
-        }
-
+                
         static PropertyInfo FindDuckProperty(Type duck, PropertyInfo prop)
         {
             try
@@ -169,12 +111,12 @@ namespace BusterWood.Ducks
             PropertyBuilder propBuilder = typeBuilder.DefineProperty(prop.Name, PropertyAttributes.None, prop.PropertyType, prop.ParameterTypes());
             if (prop.CanRead)
             {
-                var getMethod = AddMethod(typeBuilder, duckProp.GetGetMethod(), prop.GetGetMethod(), duckField);
+                var getMethod = typeBuilder.AddMethod(duckProp.GetGetMethod(), prop.GetGetMethod(), duckField);
                 propBuilder.SetGetMethod(getMethod);
             }
             if (prop.CanWrite)
             {
-                var setMethod = AddMethod(typeBuilder, duckProp.GetSetMethod(), prop.GetSetMethod(), duckField);
+                var setMethod = typeBuilder.AddMethod(duckProp.GetSetMethod(), prop.GetSetMethod(), duckField);
                 propBuilder.SetSetMethod(setMethod);
             }
         }
@@ -199,9 +141,9 @@ namespace BusterWood.Ducks
         private static void AddEvent(TypeBuilder typeBuilder, EventInfo duckEvent, EventInfo evt, FieldBuilder duckField)
         {
             EventBuilder evtBuilder = typeBuilder.DefineEvent(evt.Name, EventAttributes.None, evt.EventHandlerType);
-            var addMethod = AddMethod(typeBuilder, duckEvent.GetAddMethod(), evt.GetAddMethod(), duckField);
+            var addMethod = typeBuilder.AddMethod(duckEvent.GetAddMethod(), evt.GetAddMethod(), duckField);
             evtBuilder.SetAddOnMethod(addMethod);
-            var removeMethod = AddMethod(typeBuilder, duckEvent.GetRemoveMethod(), evt.GetRemoveMethod(), duckField);
+            var removeMethod = typeBuilder.AddMethod(duckEvent.GetRemoveMethod(), evt.GetRemoveMethod(), duckField);
             evtBuilder.SetRemoveOnMethod(removeMethod);
         }
 
