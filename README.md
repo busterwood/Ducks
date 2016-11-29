@@ -19,7 +19,8 @@ Nuget package is available called [BusterWood.Ducks](https://www.nuget.org/packa
 * loose coupling
 * composition at *at run-time* not complie-time
 * easier testing by duck-typing static methods (see below)
-\
+* easier mocking (see below)
+
 ## Why duck type an instance?
 
 Using "Duck typing" allows assemblies to be loosely coupled, allowing you change compile-time compile-time dependencies to be run-time dependencies.  For example `Ducks` allows you to write code that defines the interface *it wants to consume* but does not require users of your code to directly implement your interface:
@@ -48,6 +49,8 @@ namespace MyStuff {
 	}
 }
 ```
+
+If the object's methods do not exactly match the target interface then an `InvalidCastException` will be thrown.
 
 Style note: you may wish to define methods that do duck typing as an extension method, e.g. the first method above could be defined as as an extension method.
 
@@ -87,6 +90,8 @@ namespace MyStuff {
 }
 ```
 
+If the type's static methods do not exactly match the target interface then an `InvalidCastException` will be thrown.
+
 ## Why delegate duck typing?
 
 It is easy to get a delegate for a single method interface, but not the other way around, `Ducks` makes this easy, for example:
@@ -122,6 +127,8 @@ namespace MyStuff {
 }
 ```
 
+If the delegate does not exactly match the target interface then an `InvalidCastException` will be thrown.  `InvalidCastException` will also be thrown if the interface has more than one method.
+
 ## How do I get my original object back?
 
 When you call `Duck.Cast<>()` you get an instance of a run-time generated type that fulfills all the interfaces of you original object.  To get you original object back, call `Duck.Cast<>()` again with your original object type, for example:
@@ -145,7 +152,7 @@ public interface IStuffDoer {
 
 ### Mocking support
 
-
+`Ducks` also supports creation of [mock objects](https://en.wikipedia.org/wiki/Mock_object) via the `Mock.Cast()` methods.  `Mock.Cast()` tries to match the object (or static methods of a type) to the target interface, but if a method cannot be matched then calling the interface methods will throw a `NotImplementedException` and the cast will still succeed.
 
 ### Inspiration
 
