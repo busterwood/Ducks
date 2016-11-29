@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+  <metadata>
+    <id>BusterWood.Ducks</id>
+    <version>1.1.0</version>
+    <authors>BusterWood</authors>
+    <owners>BusterWood</owners>
+    <licenseUrl>https://github.com/busterwood/Ducks/blob/master/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/busterwood/Ducks</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Duck typing of interfaces at runtime for .NET 4.5.1.  Now supports creationg of mock objects.</description>
+    <summary>Duck typing inspired by Go's interfaces.</summary>
+    <references>
+      <reference file="BusterWood.Ducks.dll" />
+    </references>
+  </metadata>
+  <files>
+    <file src="bin\Release\BusterWood.Ducks.dll" target="lib\net45" />
+    <file src="bin\Release\BusterWood.Ducks.xml" target="lib\net45" />
+    <file src="bin\Release\BusterWood.Ducks.pdb" target="lib\net45" />
+  </files>
+</package>

@@ -50,6 +50,7 @@
     <Compile Include="TypePair.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="BusterWood.Ducks.nuspec" />
     <None Include="ducks.snk" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
