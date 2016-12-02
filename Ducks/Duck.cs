@@ -2,6 +2,7 @@
 
 namespace BusterWood.Ducks
 {
+    /// <summary>Performs run-time duck typing</summary>
     public static class Duck
     {
         /// <summary>Tries to cast the a delegate to a interface with a single method</summary>

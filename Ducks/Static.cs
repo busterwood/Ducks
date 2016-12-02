@@ -7,7 +7,7 @@ using static System.Reflection.CallingConventions;
 
 namespace BusterWood.Ducks
 {
-    public static class Static
+    static class Static
     {
         const BindingFlags PublicStatic = BindingFlags.Public | BindingFlags.Static;
         static readonly MostlyReadDictionary<TypePair, object> proxies = new MostlyReadDictionary<TypePair, object>();
@@ -19,6 +19,7 @@ namespace BusterWood.Ducks
 
         /// <param name="duck">The duck</param>
         /// <param name="interface">the interface to cast <paramref name="duck"/></param>
+        /// <param name="missingMethods">How to handle missing methods</param>
         static object CreateStaticProxy(Type duck, Type @interface, MissingMethods missingMethods)
         {
             if (duck == null)

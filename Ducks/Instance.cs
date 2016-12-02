@@ -5,7 +5,7 @@ using System.Reflection.Emit;
 
 namespace BusterWood.Ducks
 {
-    public static class Instance
+    static class Instance
     {
         const BindingFlags PublicInstance = BindingFlags.Public | BindingFlags.Instance;
         static readonly MostlyReadDictionary<TypePair, Func<object, object>> casts = new MostlyReadDictionary<TypePair, Func<object, object>>();
@@ -18,6 +18,7 @@ namespace BusterWood.Ducks
 
         /// <param name="duck">The duck</param>
         /// <param name="interface">the interface to cast <paramref name="duck"/></param>
+        /// <param name="missingMethods">How to handle missing methods</param>
         internal static Func<object, object> CreateProxy(Type duck, Type @interface, MissingMethods missingMethods)
         {
             if (duck == null)
