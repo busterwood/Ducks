@@ -2,29 +2,31 @@
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using static System.Reflection.MethodAttributes;
+using static System.Reflection.CallingConventions;
 
 namespace BusterWood.Ducks
 {
     public static class Instance
     {
         const BindingFlags PublicInstance = BindingFlags.Public | BindingFlags.Instance;
-        static readonly MostlyReadDictionary<TypePair, Func<object, object>> casts = new MostlyReadDictionary<TypePair, Func<object, object>>();
+        static readonly MostlyReadDictionary<TypePair, IDuckInstanceFactory> casts = new MostlyReadDictionary<TypePair, IDuckInstanceFactory>();
 
         internal static object Cast(object from, Type to, MissingMethods missingMethods)
         {
-            var func = casts.GetOrAdd(new TypePair(from.GetType(), to, missingMethods), pair => CreateProxy(pair.From, pair.To, pair.MissingMethods));
-            return func(from);
+            var factory = casts.GetOrAdd(new TypePair(from.GetType(), to, missingMethods), pair => CreateProxy(pair.From, pair.To, pair.MissingMethods));
+            return factory.Create(from);
         }
 
         /// <param name="duck">The duck</param>
         /// <param name="interface">the interface to cast <paramref name="duck"/></param>
-        internal static Func<object, object> CreateProxy(Type duck, Type @interface, MissingMethods missingMethods)
+        internal static IDuckInstanceFactory CreateProxy(Type duck, Type @interface, MissingMethods missingMethods)
         {
             if (duck == null)
                 throw new ArgumentNullException(nameof(duck));
             if (@interface == null)
                 throw new ArgumentNullException(nameof(@interface));
-            if (!@interface.IsInterface)
+            if (!@interface.GetTypeInfo().IsInterface)
                 throw new ArgumentException($"{@interface} is not an interface");
 
             string assemblyName = "Ducks_Instance_" + @interface.AsmName() + "_" + duck.AsmName() + ".dll";
@@ -43,11 +45,26 @@ namespace BusterWood.Ducks
             foreach (var face in @interface.GetInterfaces().Concat(@interface))
                 DefineMembers(duck, face, typeBuilder, duckField, missingMethods);
 
-            var create = typeBuilder.DefineStaticCreateMethod(duck, ctor, typeof(object));
             typeBuilder.DefineUnwrapMethod(duckField);
 
-            Type t = typeBuilder.CreateType();
-            return (Func<object, object>)Delegate.CreateDelegate(typeof(Func<object, object>), t.GetMethod("Create", BindingFlags.Static | BindingFlags.Public));
+            var factoryBuilder = CreateInstanceFactory(moduleBuilder, duck, ctor);
+
+            Type factory = typeBuilder.CreateTypeInfo().GetType();
+            return (IDuckInstanceFactory)Activator.CreateInstance(factory);
+        }
+
+        static TypeBuilder CreateInstanceFactory(ModuleBuilder moduleBuilder, Type duck, ConstructorInfo ctor)
+        {
+            TypeBuilder typeBuilder = moduleBuilder.DefineType("Factory");
+            typeBuilder.AddInterfaceImplementation(typeof(IDuckInstanceFactory));
+
+            var create = typeBuilder.DefineMethod("Create", Public | Virtual | Final, HasThis, typeof(object), new[] { typeof(object) });
+            var il = create.GetILGenerator();
+            il.Emit(OpCodes.Ldarg_0); // push obj parameter
+            il.Emit(OpCodes.Castclass, duck);   // cast obj to duck
+            il.Emit(OpCodes.Newobj, ctor);  // call ctor(duck)
+            il.Emit(OpCodes.Ret);   // end of create
+            return typeBuilder;
         }
 
         static void DefineMembers(Type duck, Type @interface, TypeBuilder typeBuilder, FieldBuilder duckField, MissingMethods missingMethods)

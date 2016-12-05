@@ -22,9 +22,13 @@ namespace BusterWood.Ducks
         {
             try
             {
-                var found = duck.GetMethod(method.Name, bindingFlags, null, method.ParameterTypes(), null);
+                var found = duck.GetRuntimeMethod(method.Name, method.ParameterTypes());
                 if (found == null && missingMethods == MissingMethods.NotImplemented)
                     return null;
+                if (found.IsStatic && (bindingFlags & BindingFlags.Instance) != 0)
+                    throw new InvalidCastException($"Type {duck.Name} has a method {bindingFlags} method {method.Name} but it is static");
+                if (!found.IsStatic && (bindingFlags & BindingFlags.Static) != 0)
+                    throw new InvalidCastException($"Type {duck.Name} has a method {bindingFlags} method {method.Name} but it is not static");
                 if (found == null)
                     throw new InvalidCastException($"Type {duck.Name} does not have a {bindingFlags} method {method.Name}");
                 return found;
@@ -39,11 +43,13 @@ namespace BusterWood.Ducks
         {
             try
             {
-                var found = duck.GetProperty(prop.Name, bindingFlags, null, prop.PropertyType, prop.ParameterTypes(), null);
+                var found = duck.GetRuntimeProperty(prop.Name); 
                 if (found == null && missingMethods == MissingMethods.NotImplemented)
                     return null;
                 if (found == null)
                     throw new InvalidCastException($"Type {duck.Name} does not have a {bindingFlags} property {prop.Name} or parameters types do not match");
+                if (found.GetType() != prop.PropertyType)
+                    throw new InvalidCastException($"Type {duck.Name} property {prop.Name} does not not match interface property type {prop.PropertyType.Name}");
                 if (prop.CanRead && !found.CanRead)
                     throw new InvalidCastException($"Type {duck.Name} does not have a {bindingFlags} get property {prop.Name}");
                 if (prop.CanWrite && !found.CanWrite)
@@ -98,7 +104,6 @@ namespace BusterWood.Ducks
             return create;
         }
 
-
         public static MethodBuilder DefineStaticCreateMethod(this TypeBuilder typeBuilder, Type duck, ConstructorBuilder ctor, Type paramType)
         {
             var create = typeBuilder.DefineMethod("Create", Public | MethodAttributes.Static, Standard, typeof(object), new[] { paramType });
@@ -140,6 +145,6 @@ namespace BusterWood.Ducks
 
             return mb;
         }
-
+        
     }
 }

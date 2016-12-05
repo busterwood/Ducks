@@ -1,9 +1,0 @@
-﻿<NUnitProject>
-  <Settings activeconfig="Debug" />
-  <Config name="Debug" binpathtype="Auto" runtimeFramework="net-4.0">
-    <assembly path="bin\Debug\UnitTests.dll" />
-  </Config>
-  <Config name="Release" binpathtype="Auto" runtimeFramework="net-4.0">
-    <assembly path="bin\Release\UnitTests.dll" />
-  </Config>
-</NUnitProject>
