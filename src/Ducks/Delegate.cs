@@ -32,34 +32,34 @@ namespace BusterWood.Ducks
             var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(assemblyName), AssemblyBuilderAccess.Run);
             var moduleBuilder = assemblyBuilder.DefineDynamicModule(assemblyName);
 
-            TypeBuilder typeBuilder = moduleBuilder.DefineType("Proxy");
+            TypeBuilder proxyBuilder = moduleBuilder.DefineType("Proxy");
             foreach (var face in @interface.GetInterfaces().Concat(@interface, typeof(IDuck)))
-                typeBuilder.AddInterfaceImplementation(face);
+                proxyBuilder.AddInterfaceImplementation(face);
     
-            var duckField = typeBuilder.DefineField("duck", duck, FieldAttributes.Private | FieldAttributes.InitOnly);
+            var duckField = proxyBuilder.DefineField("duck", duck, FieldAttributes.Private | FieldAttributes.InitOnly);
 
-            var ctor = typeBuilder.DefineConstructor(duck, duckField);
+            var ctor = proxyBuilder.DefineConstructor(duck, duckField);
 
             bool defined = false;
             foreach (var face in @interface.GetInterfaces().Concat(@interface))
-                DefineMembers(duck, face, typeBuilder, duckField, ref defined);
+                DefineMembers(duck, face, proxyBuilder, duckField, ref defined);
 
-            typeBuilder.DefineUnwrapMethod(duckField);
+            proxyBuilder.DefineUnwrapMethod(duckField);
 
-            var factoryBuilder = CreateInstanceFactory(moduleBuilder, duck, ctor);
-
-            Type factory = typeBuilder.CreateTypeInfo().GetType();
-            return (IDuckDelegateFactory)Activator.CreateInstance(factory);
+            var factoryBuilder = CreateFactory(moduleBuilder, duck, ctor);
+            proxyBuilder.CreateTypeInfo();
+            return (IDuckDelegateFactory)Activator.CreateInstance(factoryBuilder.CreateTypeInfo().AsType());
         }
 
-        static TypeBuilder CreateInstanceFactory(ModuleBuilder moduleBuilder, Type duck, ConstructorInfo ctor)
+        static TypeBuilder CreateFactory(ModuleBuilder moduleBuilder, Type duck, ConstructorInfo ctor)
         {
             TypeBuilder typeBuilder = moduleBuilder.DefineType("Factory");
             typeBuilder.AddInterfaceImplementation(typeof(IDuckDelegateFactory));
+            typeBuilder.DefineDefaultConstructor(Public);
 
             var create = typeBuilder.DefineMethod("Create", Public | Virtual | Final, HasThis, typeof(object), new[] { typeof(Delegate) });
             var il = create.GetILGenerator();
-            il.Emit(OpCodes.Ldarg_0); // push delegate parameter
+            il.Emit(OpCodes.Ldarg_1); // push delegate parameter
             il.Emit(OpCodes.Castclass, duck);   // cast delegate to duck
             il.Emit(OpCodes.Newobj, ctor);  // call ctor(duck)
             il.Emit(OpCodes.Ret);   // end of create

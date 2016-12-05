@@ -37,22 +37,14 @@ namespace BusterWood.Ducks
             foreach (var face in @interface.GetInterfaces().Concat(@interface))
                 typeBuilder.AddInterfaceImplementation(face);
 
-            var ctor = DefineConstructor(typeBuilder);
+            var ctor = typeBuilder.DefineDefaultConstructor(Public);
 
             foreach (var face in @interface.GetInterfaces().Concat(@interface))
                 DefineMethods(typeBuilder, duck, face, missingMethods);
 
-            Type t = typeBuilder.CreateTypeInfo().GetType();
-            return Activator.CreateInstance(t);
+            return Activator.CreateInstance(typeBuilder.CreateTypeInfo().AsType());
         }
         
-        static ConstructorBuilder DefineConstructor(TypeBuilder typeBuilder)
-        {
-            var ctor = typeBuilder.DefineConstructor(Public, HasThis, new Type[0]);
-            var il = ctor.GetILGenerator();
-            il.Emit(OpCodes.Ret);   // end of ctor
-            return ctor;
-        }
 
         static void DefineMethods(TypeBuilder typeBuilder, Type duck, Type @interface, MissingMethods missingMethods)
         {

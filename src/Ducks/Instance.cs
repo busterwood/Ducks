@@ -33,37 +33,38 @@ namespace BusterWood.Ducks
             var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(assemblyName), AssemblyBuilderAccess.Run);
             var moduleBuilder = assemblyBuilder.DefineDynamicModule(assemblyName);
 
-            TypeBuilder typeBuilder = moduleBuilder.DefineType("Proxy");
+            TypeBuilder proxyBuilder = moduleBuilder.DefineType("Proxy", TypeAttributes.Public);
 
             foreach (var face in @interface.GetInterfaces().Concat(@interface, typeof(IDuck)))
-                typeBuilder.AddInterfaceImplementation(face);
+                proxyBuilder.AddInterfaceImplementation(face);
 
-            var duckField = typeBuilder.DefineField("duck", duck, FieldAttributes.Private | FieldAttributes.InitOnly);
+            var duckField = proxyBuilder.DefineField("duck", duck, FieldAttributes.Private | FieldAttributes.InitOnly);
 
-            var ctor = typeBuilder.DefineConstructor(duck, duckField);
+            var ctor = proxyBuilder.DefineConstructor(duck, duckField);
 
             foreach (var face in @interface.GetInterfaces().Concat(@interface))
-                DefineMembers(duck, face, typeBuilder, duckField, missingMethods);
+                DefineMembers(duck, face, proxyBuilder, duckField, missingMethods);
 
-            typeBuilder.DefineUnwrapMethod(duckField);
+            proxyBuilder.DefineUnwrapMethod(duckField);
 
-            var factoryBuilder = CreateInstanceFactory(moduleBuilder, duck, ctor);
-
-            Type factory = typeBuilder.CreateTypeInfo().GetType();
-            return (IDuckInstanceFactory)Activator.CreateInstance(factory);
+            var factoryBuilder = CreateFactory(moduleBuilder, duck, ctor);
+            proxyBuilder.CreateTypeInfo();
+            return (IDuckInstanceFactory)Activator.CreateInstance(factoryBuilder.CreateTypeInfo().AsType());
         }
 
-        static TypeBuilder CreateInstanceFactory(ModuleBuilder moduleBuilder, Type duck, ConstructorInfo ctor)
+        static TypeBuilder CreateFactory(ModuleBuilder moduleBuilder, Type duck, ConstructorInfo ctor)
         {
-            TypeBuilder typeBuilder = moduleBuilder.DefineType("Factory");
+            TypeBuilder typeBuilder = moduleBuilder.DefineType("Factory", TypeAttributes.Public);
             typeBuilder.AddInterfaceImplementation(typeof(IDuckInstanceFactory));
 
             var create = typeBuilder.DefineMethod("Create", Public | Virtual | Final, HasThis, typeof(object), new[] { typeof(object) });
             var il = create.GetILGenerator();
-            il.Emit(OpCodes.Ldarg_0); // push obj parameter
+            il.Emit(OpCodes.Ldarg_1); // push obj parameter
             il.Emit(OpCodes.Castclass, duck);   // cast obj to duck
             il.Emit(OpCodes.Newobj, ctor);  // call ctor(duck)
             il.Emit(OpCodes.Ret);   // end of create
+
+            typeBuilder.DefineDefaultConstructor(Public);
             return typeBuilder;
         }
 

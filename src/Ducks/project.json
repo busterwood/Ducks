@@ -15,6 +15,6 @@
   },
   "buildOptions": {
     "xmlDoc": true,
-    "optimize": true
+    "optimize": false
   }
 }
