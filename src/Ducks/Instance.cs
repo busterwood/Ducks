@@ -2,53 +2,71 @@
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using static System.Reflection.MethodAttributes;
+using static System.Reflection.CallingConventions;
 
 namespace BusterWood.Ducks
 {
     static class Instance
     {
         const BindingFlags PublicInstance = BindingFlags.Public | BindingFlags.Instance;
-        static readonly MostlyReadDictionary<TypePair, Func<object, object>> casts = new MostlyReadDictionary<TypePair, Func<object, object>>();
+        static readonly MostlyReadDictionary<TypePair, IDuckInstanceFactory> casts = new MostlyReadDictionary<TypePair, IDuckInstanceFactory>();
 
         internal static object Cast(object from, Type to, MissingMethods missingMethods)
         {
-            var func = casts.GetOrAdd(new TypePair(from.GetType(), to, missingMethods), pair => CreateProxy(pair.From, pair.To, pair.MissingMethods));
-            return func(from);
+            var factory = casts.GetOrAdd(new TypePair(from.GetType(), to, missingMethods), pair => CreateProxy(pair.From, pair.To, pair.MissingMethods));
+            return factory.Create(from);
         }
 
         /// <param name="duck">The duck</param>
         /// <param name="interface">the interface to cast <paramref name="duck"/></param>
         /// <param name="missingMethods">How to handle missing methods</param>
-        internal static Func<object, object> CreateProxy(Type duck, Type @interface, MissingMethods missingMethods)
+        internal static IDuckInstanceFactory CreateProxy(Type duck, Type @interface, MissingMethods missingMethods)
         {
             if (duck == null)
                 throw new ArgumentNullException(nameof(duck));
             if (@interface == null)
                 throw new ArgumentNullException(nameof(@interface));
-            if (!@interface.IsInterface)
+            if (!@interface.GetTypeInfo().IsInterface)
                 throw new ArgumentException($"{@interface} is not an interface");
 
             string assemblyName = "Ducks_Instance_" + @interface.AsmName() + "_" + duck.AsmName() + ".dll";
             var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(assemblyName), AssemblyBuilderAccess.Run);
             var moduleBuilder = assemblyBuilder.DefineDynamicModule(assemblyName);
 
-            TypeBuilder typeBuilder = moduleBuilder.DefineType("Proxy");
+            TypeBuilder proxyBuilder = moduleBuilder.DefineType("Proxy", TypeAttributes.Public);
 
             foreach (var face in @interface.GetInterfaces().Concat(@interface, typeof(IDuck)))
-                typeBuilder.AddInterfaceImplementation(face);
+                proxyBuilder.AddInterfaceImplementation(face);
 
-            var duckField = typeBuilder.DefineField("duck", duck, FieldAttributes.Private | FieldAttributes.InitOnly);
+            var duckField = proxyBuilder.DefineField("duck", duck, FieldAttributes.Private | FieldAttributes.InitOnly);
 
-            var ctor = typeBuilder.DefineConstructor(duck, duckField);
+            var ctor = proxyBuilder.DefineConstructor(duck, duckField);
 
             foreach (var face in @interface.GetInterfaces().Concat(@interface))
-                DefineMembers(duck, face, typeBuilder, duckField, missingMethods);
+                DefineMembers(duck, face, proxyBuilder, duckField, missingMethods);
 
-            var create = typeBuilder.DefineStaticCreateMethod(duck, ctor, typeof(object));
-            typeBuilder.DefineUnwrapMethod(duckField);
+            proxyBuilder.DefineUnwrapMethod(duckField);
 
-            Type t = typeBuilder.CreateType();
-            return (Func<object, object>)Delegate.CreateDelegate(typeof(Func<object, object>), t.GetMethod("Create", BindingFlags.Static | BindingFlags.Public));
+            var factoryBuilder = CreateFactory(moduleBuilder, duck, ctor);
+            proxyBuilder.CreateTypeInfo();
+            return (IDuckInstanceFactory)Activator.CreateInstance(factoryBuilder.CreateTypeInfo().AsType());
+        }
+
+        static TypeBuilder CreateFactory(ModuleBuilder moduleBuilder, Type duck, ConstructorInfo ctor)
+        {
+            TypeBuilder typeBuilder = moduleBuilder.DefineType("Factory", TypeAttributes.Public);
+            typeBuilder.AddInterfaceImplementation(typeof(IDuckInstanceFactory));
+
+            var create = typeBuilder.DefineMethod("Create", Public | Virtual | Final, HasThis, typeof(object), new[] { typeof(object) });
+            var il = create.GetILGenerator();
+            il.Emit(OpCodes.Ldarg_1); // push obj parameter
+            il.Emit(OpCodes.Castclass, duck);   // cast obj to duck
+            il.Emit(OpCodes.Newobj, ctor);  // call ctor(duck)
+            il.Emit(OpCodes.Ret);   // end of create
+
+            typeBuilder.DefineDefaultConstructor(Public);
+            return typeBuilder;
         }
 
         static void DefineMembers(Type duck, Type @interface, TypeBuilder typeBuilder, FieldBuilder duckField, MissingMethods missingMethods)

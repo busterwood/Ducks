@@ -26,7 +26,7 @@ namespace BusterWood.Ducks
                 throw new ArgumentNullException(nameof(duck));
             if (@interface == null)
                 throw new ArgumentNullException(nameof(@interface));
-            if (!@interface.IsInterface)
+            if (!@interface.GetTypeInfo().IsInterface)
                 throw new ArgumentException($"{@interface} is not an interface");
 
             string assemblyName = "Ducks_Static_" + @interface.AsmName() + "_" + duck.AsmName() + ".dll";
@@ -38,22 +38,14 @@ namespace BusterWood.Ducks
             foreach (var face in @interface.GetInterfaces().Concat(@interface))
                 typeBuilder.AddInterfaceImplementation(face);
 
-            var ctor = DefineConstructor(typeBuilder);
+            var ctor = typeBuilder.DefineDefaultConstructor(Public);
 
             foreach (var face in @interface.GetInterfaces().Concat(@interface))
                 DefineMethods(typeBuilder, duck, face, missingMethods);
 
-            Type t = typeBuilder.CreateType();
-            return Activator.CreateInstance(t);
+            return Activator.CreateInstance(typeBuilder.CreateTypeInfo().AsType());
         }
         
-        static ConstructorBuilder DefineConstructor(TypeBuilder typeBuilder)
-        {
-            var ctor = typeBuilder.DefineConstructor(Public, HasThis, new Type[0]);
-            var il = ctor.GetILGenerator();
-            il.Emit(OpCodes.Ret);   // end of ctor
-            return ctor;
-        }
 
         static void DefineMethods(TypeBuilder typeBuilder, Type duck, Type @interface, MissingMethods missingMethods)
         {

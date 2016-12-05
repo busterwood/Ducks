@@ -10,6 +10,8 @@ namespace BusterWood.Ducks
 {
     static class Extensions
     {
+        public static readonly Type[] EmptyTypes = new Type[0];
+
         public static Type[] ParameterTypes(this MethodInfo method) => method.GetParameters().Select(p => p.ParameterType).ToArray();
 
         public static Type[] ParameterTypes(this PropertyInfo method) => method.GetIndexParameters().Select(p => p.ParameterType).ToArray();
@@ -22,9 +24,15 @@ namespace BusterWood.Ducks
         {
             try
             {
-                var found = duck.GetMethod(method.Name, bindingFlags, null, method.ParameterTypes(), null);
+                var found = duck.GetRuntimeMethod(method.Name, method.ParameterTypes());
                 if (found == null && missingMethods == MissingMethods.NotImplemented)
                     return null;
+                if (found == null)
+                    throw new InvalidCastException($"Type {duck.Name} does not have a {bindingFlags} method {method.Name}");
+                if (found.IsStatic && (bindingFlags & BindingFlags.Instance) != 0)
+                    throw new InvalidCastException($"Type {duck.Name} has a method {bindingFlags} method {method.Name} but it is static");
+                if (!found.IsStatic && (bindingFlags & BindingFlags.Static) != 0)
+                    throw new InvalidCastException($"Type {duck.Name} has a method {bindingFlags} method {method.Name} but it is not static");
                 if (found == null)
                     throw new InvalidCastException($"Type {duck.Name} does not have a {bindingFlags} method {method.Name}");
                 return found;
@@ -39,11 +47,13 @@ namespace BusterWood.Ducks
         {
             try
             {
-                var found = duck.GetProperty(prop.Name, bindingFlags, null, prop.PropertyType, prop.ParameterTypes(), null);
+                var found = duck.GetRuntimeProperty(prop.Name); 
                 if (found == null && missingMethods == MissingMethods.NotImplemented)
                     return null;
                 if (found == null)
                     throw new InvalidCastException($"Type {duck.Name} does not have a {bindingFlags} property {prop.Name} or parameters types do not match");
+                if (found.PropertyType != prop.PropertyType)
+                    throw new InvalidCastException($"Type {duck.Name} property {prop.Name} does not not match interface property type {prop.PropertyType.Name}");
                 if (prop.CanRead && !found.CanRead)
                     throw new InvalidCastException($"Type {duck.Name} does not have a {bindingFlags} get property {prop.Name}");
                 if (prop.CanWrite && !found.CanWrite)
@@ -82,10 +92,11 @@ namespace BusterWood.Ducks
             il.Emit(OpCodes.Ldarg_0); // push this
             il.Emit(OpCodes.Ldarg_1); // push duck
             il.Emit(OpCodes.Stfld, duckField); // store the parameter in the duck field
+            il.Emit(OpCodes.Ldarg_0); // push this
+            il.Emit(OpCodes.Call, typeof(object).GetConstructor(EmptyTypes));
             il.Emit(OpCodes.Ret);   // end of ctor
             return ctor;
         }
-
 
         public static MethodBuilder DefineUnwrapMethod(this TypeBuilder typeBuilder, FieldBuilder duckField)
         {
@@ -97,7 +108,6 @@ namespace BusterWood.Ducks
             il.Emit(OpCodes.Ret);   // return the object
             return create;
         }
-
 
         public static MethodBuilder DefineStaticCreateMethod(this TypeBuilder typeBuilder, Type duck, ConstructorBuilder ctor, Type paramType)
         {
@@ -140,6 +150,6 @@ namespace BusterWood.Ducks
 
             return mb;
         }
-
+        
     }
 }
