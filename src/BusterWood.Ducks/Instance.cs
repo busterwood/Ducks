@@ -34,7 +34,7 @@ namespace BusterWood.Ducks
             var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(assemblyName), AssemblyBuilderAccess.Run);
             var moduleBuilder = assemblyBuilder.DefineDynamicModule(assemblyName);
 
-            TypeBuilder proxyBuilder = moduleBuilder.DefineType("Proxy", TypeAttributes.Public);
+            TypeBuilder proxyBuilder = moduleBuilder.DefineType($"{duck.Name}_{@interface.Name}_Proxy", TypeAttributes.Public);
 
             foreach (var face in @interface.GetInterfaces().Concat(@interface, typeof(IDuck)))
                 proxyBuilder.AddInterfaceImplementation(face);
@@ -95,12 +95,12 @@ namespace BusterWood.Ducks
             PropertyBuilder propBuilder = typeBuilder.DefineProperty(prop.Name, PropertyAttributes.None, prop.PropertyType, prop.ParameterTypes());
             if (prop.CanRead)
             {
-                var getMethod = typeBuilder.AddMethod(duckProp.GetGetMethod(), prop.GetGetMethod(), duckField);
+                var getMethod = typeBuilder.AddMethod(duckProp?.GetGetMethod(), prop.GetGetMethod(), duckField);
                 propBuilder.SetGetMethod(getMethod);
             }
             if (prop.CanWrite)
             {
-                var setMethod = typeBuilder.AddMethod(duckProp.GetSetMethod(), prop.GetSetMethod(), duckField);
+                var setMethod = typeBuilder.AddMethod(duckProp?.GetSetMethod(), prop.GetSetMethod(), duckField);
                 propBuilder.SetSetMethod(setMethod);
             }
         }
@@ -108,9 +108,9 @@ namespace BusterWood.Ducks
         static void AddEvent(TypeBuilder typeBuilder, EventInfo duckEvent, EventInfo evt, FieldBuilder duckField)
         {
             EventBuilder evtBuilder = typeBuilder.DefineEvent(evt.Name, EventAttributes.None, evt.EventHandlerType);
-            var addMethod = typeBuilder.AddMethod(duckEvent.GetAddMethod(), evt.GetAddMethod(), duckField);
+            var addMethod = typeBuilder.AddMethod(duckEvent?.GetAddMethod(), evt.GetAddMethod(), duckField);
             evtBuilder.SetAddOnMethod(addMethod);
-            var removeMethod = typeBuilder.AddMethod(duckEvent.GetRemoveMethod(), evt.GetRemoveMethod(), duckField);
+            var removeMethod = typeBuilder.AddMethod(duckEvent?.GetRemoveMethod(), evt.GetRemoveMethod(), duckField);
             evtBuilder.SetRemoveOnMethod(removeMethod);
         }
 

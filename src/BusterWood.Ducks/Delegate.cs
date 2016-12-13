@@ -33,7 +33,7 @@ namespace BusterWood.Ducks
             var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(assemblyName), AssemblyBuilderAccess.Run);
             var moduleBuilder = assemblyBuilder.DefineDynamicModule(assemblyName);
 
-            TypeBuilder proxyBuilder = moduleBuilder.DefineType("Proxy");
+            TypeBuilder proxyBuilder = moduleBuilder.DefineType($"{duck.Name}_{@interface.Name}_DelegateProxy");
             foreach (var face in @interface.GetInterfaces().Concat(@interface, typeof(IDuck)))
                 proxyBuilder.AddInterfaceImplementation(face);
     

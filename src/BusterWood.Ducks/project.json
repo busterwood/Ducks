@@ -1,14 +1,27 @@
 {
-  "version": "2.0.0-*",
+  "version": "2.0.2-*",
+  "authors": [ "BusterWood" ],
+  "copyright": "BusterWood 2016",
+  "projectUrl": "https://github.com/busterwood/Ducks",
+  "packOptions": {
+    "licenseUrl": "https://github.com/busterwood/Ducks/blob/master/LICENSE",
+    "summary": "Duck typing and mocking for .NET 4.5, 4.6 and .NET Core",
+    "releaseNotes": "Update proxy names to make errors easier to understand",
+    "owners": [ "BusterWood" ]
+  },
   "dependencies": {
-    "NETStandard.Library": "1.6.0",
-    "System.Reflection.Emit": "4.0.0"
   },
   "frameworks": {
     "netstandard1.3": {
-      "imports": "dnxcore50",
       "dependencies": {
+        "System.Collections": "4.0.11",
+        "System.Linq": "4.1.0",
+        "System.Linq.Expressions": "4.1.0",
         "System.Reflection": "4.1.0",
+        "System.Reflection.Emit": "4.0.1",
+        "System.Reflection.Extensions": "4.0.1",
+        "System.Runtime": "4.1.0",
+        "System.Threading": "4.0.11",
         "System.Reflection.TypeExtensions": "4.1.0"
       }
     },
