@@ -1,6 +1,6 @@
 # Ducks
 
-[![Build status](https://ci.appveyor.com/api/projects/status/jeujj9n91gr9t6y7/branch/master?svg=true)](https://ci.appveyor.com/project/busterwood/ducks/branch/master)
+[![Build status](https://ci.appveyor.com/api/projects/status/jeujj9n91gr9t6y7/branch/master?svg=true)](https://ci.appveyor.com/project/busterwood/ducks/branch/master)  [![Nuget](https://img.shields.io/nuget/v/BusterWood.Ducks.svg)](https://www.nuget.org/packages/BusterWood.Ducks)
 
 [Duck typing](https://en.wikipedia.org/wiki/Duck_typing) of *interfaces* at runtime for .NET 4.5(+) and .NET Core (.NET Standard 1.3).
 
