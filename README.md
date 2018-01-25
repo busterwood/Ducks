@@ -1,3 +1,7 @@
+# DEPRICATED
+
+Code has moved to https://github.com/busterwood/Goodies
+
 # Ducks
 
 [![Build status](https://ci.appveyor.com/api/projects/status/jeujj9n91gr9t6y7/branch/master?svg=true)](https://ci.appveyor.com/project/busterwood/ducks/branch/master)  [![Nuget](https://img.shields.io/nuget/v/BusterWood.Ducks.svg)](https://www.nuget.org/packages/BusterWood.Ducks)
